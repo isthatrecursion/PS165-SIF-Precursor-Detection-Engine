@@ -1,0 +1,17 @@
+node_modules/
+.python/
+.venv/
+venv/
+env/
+__pycache__/
+*.pyc
+.env
+dist/
+build/
+.DS_Store
+*.db
+sih165.db
+.gemini/
+ml/models/
+frontend/dist/
+frontend/node_modules/

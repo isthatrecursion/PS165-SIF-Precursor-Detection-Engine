@@ -1,0 +1,9 @@
+Collecting transformers==4.45.2
+  Using cached transformers-4.45.2-py3-none-any.whl.metadata (44 kB)
+Collecting xgboost==2.1.1
+  Using cached xgboost-2.1.1-py3-none-win_amd64.whl.metadata (2.1 kB)
+Collecting shap==0.46.0
+  Using cached shap-0.46.0-cp312-cp312-win_amd64.whl.metadata (25 kB)
+Collecting captum==0.7.0
+  Using cached captum-0.7.0-py3-none-any.whl.metadata (26 kB)
+Collecting scikit-learn==1.5.2

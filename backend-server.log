@@ -1,0 +1,505 @@
+2026-09-21 22:33:34,290 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-21 22:33:34,291 INFO sqlalchemy.engine.Engine PRAGMA main.table_info("reports")
+2026-09-21 22:33:34,291 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-09-21 22:33:34,299 INFO sqlalchemy.engine.Engine PRAGMA main.table_info("features")
+2026-09-21 22:33:34,299 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-09-21 22:33:34,304 INFO sqlalchemy.engine.Engine PRAGMA main.table_info("predictions")
+2026-09-21 22:33:34,305 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-09-21 22:33:34,311 INFO sqlalchemy.engine.Engine PRAGMA main.table_info("officer_decisions")
+2026-09-21 22:33:34,312 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-09-21 22:33:34,312 INFO sqlalchemy.engine.Engine PRAGMA main.table_info("audit_log")
+2026-09-21 22:33:34,318 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-09-21 22:33:34,318 INFO sqlalchemy.engine.Engine PRAGMA main.table_info("active_learning_queue")
+2026-09-21 22:33:34,318 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-09-21 22:33:34,326 INFO sqlalchemy.engine.Engine COMMIT
+INFO:     127.0.0.1:54487 - "GET /health HTTP/1.1" 200 OK
+2026-09-21 22:34:03,472 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-21 22:34:03,500 INFO sqlalchemy.engine.Engine SELECT reports.site, reports.industry_sector, count(predictions.id) AS total, sum(CASE WHEN (predictions.sif_flag = 1) THEN ? ELSE ? END) AS sif_count, sum(CASE WHEN (predictions.stage1_flagged = 1) THEN ? ELSE ? END) AS flagged_count 
+FROM reports LEFT OUTER JOIN predictions ON predictions.report_id = reports.id GROUP BY reports.site, reports.industry_sector
+2026-09-21 22:34:03,500 INFO sqlalchemy.engine.Engine [generated in 0.00162s] (1, 0, 1, 0)
+2026-09-21 22:34:03,554 INFO sqlalchemy.engine.Engine SELECT predictions.iogp_rules, predictions.cause_categories 
+FROM predictions 
+WHERE predictions.sif_flag = 1
+2026-09-21 22:34:03,554 INFO sqlalchemy.engine.Engine [generated in 0.00076s] ()
+2026-09-21 22:34:03,567 INFO sqlalchemy.engine.Engine SELECT reports.site, features.barrier_status, count(*) AS count 
+FROM reports JOIN features ON features.report_id = reports.id 
+WHERE features.has_barrier_failure = 1 GROUP BY reports.site, features.barrier_status
+2026-09-21 22:34:03,571 INFO sqlalchemy.engine.Engine [generated in 0.00123s] ()
+2026-09-21 22:34:03,581 INFO sqlalchemy.engine.Engine COMMIT
+INFO:     127.0.0.1:54488 - "GET /api/v1/dashboard/leadership HTTP/1.1" 200 OK
+2026-09-21 22:34:03,602 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-21 22:34:03,608 INFO sqlalchemy.engine.Engine SELECT reports.site, count(reports.id) AS total, sum(CASE WHEN (features.hi_po = 1) THEN ? ELSE ? END) AS actual_hipo, sum(CASE WHEN (predictions.sif_flag = 1) THEN ? ELSE ? END) AS predicted_sif 
+FROM reports LEFT OUTER JOIN features ON features.report_id = reports.id LEFT OUTER JOIN predictions ON predictions.report_id = reports.id GROUP BY reports.site
+2026-09-21 22:34:03,608 INFO sqlalchemy.engine.Engine [generated in 0.00119s] (1, 0, 1, 0)
+2026-09-21 22:34:03,616 INFO sqlalchemy.engine.Engine COMMIT
+INFO:     127.0.0.1:54489 - "GET /api/v1/dashboard/site-recall HTTP/1.1" 200 OK
+2026-09-21 22:34:03,630 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-21 22:34:03,639 INFO sqlalchemy.engine.Engine SELECT reports.id, reports.source_file, reports.site, reports.country, reports.industry_sector, reports.equipment, reports.shift_date, reports.reporter_role, reports.report_text, reports.report_type, reports.critical_risk, reports.ocr_confidence, reports.ingest_status, reports.has_site_metadata, reports.has_equipment_metadata, reports.has_shift_metadata, reports.text_only_mode, reports.lower_confidence_flag, reports.created_at, predictions.id AS id_1, predictions.report_id, predictions.stage1_flagged, predictions.stage1_score, predictions.sif_flag, predictions.calibrated_prob, predictions.confidence_band, predictions.ood_score, predictions.iogp_rules, predictions.cause_categories, predictions.shap_values, predictions.ig_spans, predictions.routing_reason, predictions.operational_state, predictions.created_at AS created_at_1 
+FROM reports LEFT OUTER JOIN predictions ON predictions.report_id = reports.id 
+WHERE reports.ingest_status = ? OR predictions.confidence_band IN (?, ?, ?) OR reports.lower_confidence_flag = 1
+ LIMIT ? OFFSET ?
+2026-09-21 22:34:03,647 INFO sqlalchemy.engine.Engine [generated in 0.00194s] ('MANUAL_REVIEW', 'LOW', 'AMBIGUOUS', 'OOD', 50, 0)
+2026-09-21 22:34:03,658 INFO sqlalchemy.engine.Engine COMMIT
+INFO:     127.0.0.1:54490 - "GET /api/v1/queue/manual-review HTTP/1.1" 200 OK
+2026-09-21 22:34:03,679 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-21 22:34:03,679 INFO sqlalchemy.engine.Engine SELECT audit_log.id, audit_log.report_id, audit_log.event_type, audit_log.model_score, audit_log.officer_action, audit_log.officer_role, audit_log.metadata_json, audit_log.timestamp 
+FROM audit_log ORDER BY audit_log.timestamp DESC
+ LIMIT ? OFFSET ?
+2026-09-21 22:34:03,687 INFO sqlalchemy.engine.Engine [generated in 0.00138s] (100, 0)
+2026-09-21 22:34:03,707 INFO sqlalchemy.engine.Engine COMMIT
+INFO:     127.0.0.1:54491 - "GET /api/v1/audit-log HTTP/1.1" 200 OK
+2026-09-21 22:34:03,723 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-21 22:34:03,735 INFO sqlalchemy.engine.Engine SELECT active_learning_queue.id, active_learning_queue.report_id, active_learning_queue.model_prob, active_learning_queue.queue_reason, active_learning_queue.corrected_sif, active_learning_queue.corrected_iogp, active_learning_queue.corrected_cause, active_learning_queue.labeled_by, active_learning_queue.labeled_at, active_learning_queue.created_at, active_learning_queue.status, reports.id AS id_1, reports.source_file, reports.site, reports.country, reports.industry_sector, reports.equipment, reports.shift_date, reports.reporter_role, reports.report_text, reports.report_type, reports.critical_risk, reports.ocr_confidence, reports.ingest_status, reports.has_site_metadata, reports.has_equipment_metadata, reports.has_shift_metadata, reports.text_only_mode, reports.lower_confidence_flag, reports.created_at AS created_at_1 
+FROM active_learning_queue JOIN reports ON reports.id = active_learning_queue.report_id 
+WHERE active_learning_queue.status = ? ORDER BY active_learning_queue.model_prob
+2026-09-21 22:34:03,735 INFO sqlalchemy.engine.Engine [generated in 0.00195s] ('PENDING',)
+2026-09-21 22:34:03,745 INFO sqlalchemy.engine.Engine COMMIT
+INFO:     127.0.0.1:54492 - "GET /api/v1/active-learning/queue HTTP/1.1" 200 OK
+2026-09-21 22:34:03,765 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-21 22:34:03,771 INFO sqlalchemy.engine.Engine SELECT count(predictions.id) AS total, sum(CASE WHEN (predictions.sif_flag IS NULL) THEN ? ELSE ? END) AS unscored, sum(CASE WHEN (predictions.sif_flag = 1) THEN ? ELSE ? END) AS sif_flagged, sum(CASE WHEN (predictions.sif_flag = 0) THEN ? ELSE ? END) AS non_sif, sum(CASE WHEN (predictions.operational_state = ?) THEN ? ELSE ? END) AS needs_review 
+FROM predictions
+2026-09-21 22:34:03,773 INFO sqlalchemy.engine.Engine [generated in 0.00238s] (1, 0, 1, 0, 1, 0, 'NEEDS_REVIEW', 1, 0)
+2026-09-21 22:34:03,778 INFO sqlalchemy.engine.Engine COMMIT
+INFO:     127.0.0.1:54493 - "GET /api/v1/score/status HTTP/1.1" 200 OK
+2026-09-21 22:35:34,009 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-21 22:35:34,013 INFO sqlalchemy.engine.Engine SELECT reports.id, reports.source_file, reports.site, reports.country, reports.industry_sector, reports.equipment, reports.shift_date, reports.reporter_role, reports.report_text, reports.report_type, reports.critical_risk, reports.ocr_confidence, reports.ingest_status, reports.has_site_metadata, reports.has_equipment_metadata, reports.has_shift_metadata, reports.text_only_mode, reports.lower_confidence_flag, reports.created_at, predictions.id AS id_1, predictions.report_id, predictions.stage1_flagged, predictions.stage1_score, predictions.sif_flag, predictions.calibrated_prob, predictions.confidence_band, predictions.ood_score, predictions.iogp_rules, predictions.cause_categories, predictions.shap_values, predictions.ig_spans, predictions.routing_reason, predictions.operational_state, predictions.created_at AS created_at_1, officer_decisions.id AS id_2, officer_decisions.report_id AS report_id_1, officer_decisions.officer_id, officer_decisions.officer_role, officer_decisions.decision, officer_decisions.notes, officer_decisions.created_at AS created_at_2 
+FROM reports LEFT OUTER JOIN predictions ON predictions.report_id = reports.id LEFT OUTER JOIN officer_decisions ON officer_decisions.report_id = reports.id 
+WHERE officer_decisions.id IS NULL ORDER BY predictions.calibrated_prob DESC NULLS LAST
+ LIMIT ? OFFSET ?
+2026-09-21 22:35:34,019 INFO sqlalchemy.engine.Engine [generated in 0.00127s] (1, 0)
+2026-09-21 22:35:34,026 INFO sqlalchemy.engine.Engine COMMIT
+INFO:     127.0.0.1:54352 - "GET /api/v1/reports?status=UNREVIEWED&page_size=1 HTTP/1.1" 200 OK
+2026-09-21 22:35:34,263 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-21 22:35:34,263 INFO sqlalchemy.engine.Engine SELECT officer_decisions.id, officer_decisions.report_id, officer_decisions.officer_id, officer_decisions.officer_role, officer_decisions.decision, officer_decisions.notes, officer_decisions.created_at 
+FROM officer_decisions 
+WHERE officer_decisions.report_id = ?
+2026-09-21 22:35:34,266 INFO sqlalchemy.engine.Engine [generated in 0.00104s] ('ab820b06-c825-451e-a22e-4dfc5848a4fd',)
+2026-09-21 22:35:34,270 INFO sqlalchemy.engine.Engine SELECT predictions.id, predictions.report_id, predictions.stage1_flagged, predictions.stage1_score, predictions.sif_flag, predictions.calibrated_prob, predictions.confidence_band, predictions.ood_score, predictions.iogp_rules, predictions.cause_categories, predictions.shap_values, predictions.ig_spans, predictions.routing_reason, predictions.operational_state, predictions.created_at 
+FROM predictions 
+WHERE predictions.report_id = ?
+2026-09-21 22:35:34,270 INFO sqlalchemy.engine.Engine [generated in 0.00104s] ('ab820b06-c825-451e-a22e-4dfc5848a4fd',)
+2026-09-21 22:35:34,276 INFO sqlalchemy.engine.Engine INSERT INTO active_learning_queue (id, report_id, model_prob, queue_reason, corrected_sif, labeled_by, labeled_at, created_at, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+2026-09-21 22:35:34,276 INFO sqlalchemy.engine.Engine [generated in 0.00170s] ('2a4e53da-63a9-4a10-acc0-29b413154dc6', 'ab820b06-c825-451e-a22e-4dfc5848a4fd', 0.6188, 'OFFICER_DISAGREE', None, None, None, '2026-09-21 17:05:34.276928', 'PENDING')
+2026-09-21 22:35:34,287 INFO sqlalchemy.engine.Engine INSERT INTO audit_log (id, report_id, event_type, model_score, officer_action, officer_role, metadata_json, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+2026-09-21 22:35:34,287 INFO sqlalchemy.engine.Engine [generated in 0.00132s] ('fb16481c-60db-4f6e-8197-3ecd75005b0e', 'ab820b06-c825-451e-a22e-4dfc5848a4fd', 'DECIDED', 0.6188, 'DISAGREE', 'safety_officer', '{"notes": "End-to-end active-learning workflow validation."}', '2026-09-21 17:05:34.287384')
+2026-09-21 22:35:34,290 INFO sqlalchemy.engine.Engine INSERT INTO officer_decisions (id, report_id, officer_id, officer_role, decision, notes, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)
+2026-09-21 22:35:34,290 INFO sqlalchemy.engine.Engine [generated in 0.00128s] ('2b4be4d9-9d48-4ab3-b416-0674e7d90b88', 'ab820b06-c825-451e-a22e-4dfc5848a4fd', 'demo-validation', 'safety_officer', 'DISAGREE', 'End-to-end active-learning workflow validation.', '2026-09-21 17:05:34.290900')
+2026-09-21 22:35:34,297 INFO sqlalchemy.engine.Engine COMMIT
+INFO:     127.0.0.1:54354 - "POST /api/v1/reports/ab820b06-c825-451e-a22e-4dfc5848a4fd/decision HTTP/1.1" 200 OK
+2026-09-21 22:35:34,318 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-21 22:35:34,318 INFO sqlalchemy.engine.Engine SELECT active_learning_queue.id, active_learning_queue.report_id, active_learning_queue.model_prob, active_learning_queue.queue_reason, active_learning_queue.corrected_sif, active_learning_queue.corrected_iogp, active_learning_queue.corrected_cause, active_learning_queue.labeled_by, active_learning_queue.labeled_at, active_learning_queue.created_at, active_learning_queue.status, reports.id AS id_1, reports.source_file, reports.site, reports.country, reports.industry_sector, reports.equipment, reports.shift_date, reports.reporter_role, reports.report_text, reports.report_type, reports.critical_risk, reports.ocr_confidence, reports.ingest_status, reports.has_site_metadata, reports.has_equipment_metadata, reports.has_shift_metadata, reports.text_only_mode, reports.lower_confidence_flag, reports.created_at AS created_at_1 
+FROM active_learning_queue JOIN reports ON reports.id = active_learning_queue.report_id 
+WHERE active_learning_queue.status = ? ORDER BY active_learning_queue.model_prob
+2026-09-21 22:35:34,318 INFO sqlalchemy.engine.Engine [cached since 90.59s ago] ('PENDING',)
+2026-09-21 22:35:34,328 INFO sqlalchemy.engine.Engine COMMIT
+INFO:     127.0.0.1:54355 - "GET /api/v1/active-learning/queue HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62715 - "GET /health HTTP/1.1" 200 OK
+2026-09-21 23:22:32,635 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-21 23:22:32,669 INFO sqlalchemy.engine.Engine SELECT count(predictions.id) AS total, sum(CASE WHEN (predictions.sif_flag IS NULL) THEN ? ELSE ? END) AS unscored, sum(CASE WHEN (predictions.sif_flag = 1) THEN ? ELSE ? END) AS sif_flagged, sum(CASE WHEN (predictions.sif_flag = 0) THEN ? ELSE ? END) AS non_sif, sum(CASE WHEN (predictions.operational_state = ?) THEN ? ELSE ? END) AS needs_review 
+FROM predictions
+2026-09-21 23:22:32,678 INFO sqlalchemy.engine.Engine [cached since 2909s ago] (1, 0, 1, 0, 1, 0, 'NEEDS_REVIEW', 1, 0)
+2026-09-21 23:22:32,772 INFO sqlalchemy.engine.Engine COMMIT
+INFO:     127.0.0.1:60851 - "GET /api/v1/score/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65119 - "OPTIONS /api/v1/reports?page=1&page_size=50 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65433 - "OPTIONS /api/v1/reports?page=1&page_size=50 HTTP/1.1" 200 OK
+2026-09-21 23:35:09,548 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-21 23:35:12,598 INFO sqlalchemy.engine.Engine SELECT reports.id, reports.source_file, reports.site, reports.country, reports.industry_sector, reports.equipment, reports.shift_date, reports.reporter_role, reports.report_text, reports.report_type, reports.critical_risk, reports.ocr_confidence, reports.ingest_status, reports.has_site_metadata, reports.has_equipment_metadata, reports.has_shift_metadata, reports.text_only_mode, reports.lower_confidence_flag, reports.created_at, predictions.id AS id_1, predictions.report_id, predictions.stage1_flagged, predictions.stage1_score, predictions.sif_flag, predictions.calibrated_prob, predictions.confidence_band, predictions.ood_score, predictions.iogp_rules, predictions.cause_categories, predictions.shap_values, predictions.ig_spans, predictions.routing_reason, predictions.operational_state, predictions.created_at AS created_at_1, officer_decisions.id AS id_2, officer_decisions.report_id AS report_id_1, officer_decisions.officer_id, officer_decisions.officer_role, officer_decisions.decision, officer_decisions.notes, officer_decisions.created_at AS created_at_2 
+FROM reports LEFT OUTER JOIN predictions ON predictions.report_id = reports.id LEFT OUTER JOIN officer_decisions ON officer_decisions.report_id = reports.id ORDER BY predictions.calibrated_prob DESC NULLS LAST
+ LIMIT ? OFFSET ?
+2026-09-21 23:35:12,640 INFO sqlalchemy.engine.Engine [generated in 0.13304s] (50, 0)
+2026-09-21 23:35:17,584 INFO sqlalchemy.engine.Engine COMMIT
+INFO:     127.0.0.1:65119 - "GET /api/v1/reports?page=1&page_size=50 HTTP/1.1" 200 OK
+2026-09-21 23:35:18,318 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-21 23:35:18,327 INFO sqlalchemy.engine.Engine SELECT reports.id, reports.source_file, reports.site, reports.country, reports.industry_sector, reports.equipment, reports.shift_date, reports.reporter_role, reports.report_text, reports.report_type, reports.critical_risk, reports.ocr_confidence, reports.ingest_status, reports.has_site_metadata, reports.has_equipment_metadata, reports.has_shift_metadata, reports.text_only_mode, reports.lower_confidence_flag, reports.created_at, predictions.id AS id_1, predictions.report_id, predictions.stage1_flagged, predictions.stage1_score, predictions.sif_flag, predictions.calibrated_prob, predictions.confidence_band, predictions.ood_score, predictions.iogp_rules, predictions.cause_categories, predictions.shap_values, predictions.ig_spans, predictions.routing_reason, predictions.operational_state, predictions.created_at AS created_at_1, officer_decisions.id AS id_2, officer_decisions.report_id AS report_id_1, officer_decisions.officer_id, officer_decisions.officer_role, officer_decisions.decision, officer_decisions.notes, officer_decisions.created_at AS created_at_2 
+FROM reports LEFT OUTER JOIN predictions ON predictions.report_id = reports.id LEFT OUTER JOIN officer_decisions ON officer_decisions.report_id = reports.id ORDER BY predictions.calibrated_prob DESC NULLS LAST
+ LIMIT ? OFFSET ?
+2026-09-21 23:35:18,327 INFO sqlalchemy.engine.Engine [cached since 5.82s ago] (50, 0)
+2026-09-21 23:35:19,149 INFO sqlalchemy.engine.Engine COMMIT
+INFO:     127.0.0.1:56435 - "OPTIONS /api/v1/reports?page=1&page_size=50 HTTP/1.1" 200 OK
+2026-09-21 23:40:28,678 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-21 23:40:28,682 INFO sqlalchemy.engine.Engine SELECT reports.id, reports.source_file, reports.site, reports.country, reports.industry_sector, reports.equipment, reports.shift_date, reports.reporter_role, reports.report_text, reports.report_type, reports.critical_risk, reports.ocr_confidence, reports.ingest_status, reports.has_site_metadata, reports.has_equipment_metadata, reports.has_shift_metadata, reports.text_only_mode, reports.lower_confidence_flag, reports.created_at, predictions.id AS id_1, predictions.report_id, predictions.stage1_flagged, predictions.stage1_score, predictions.sif_flag, predictions.calibrated_prob, predictions.confidence_band, predictions.ood_score, predictions.iogp_rules, predictions.cause_categories, predictions.shap_values, predictions.ig_spans, predictions.routing_reason, predictions.operational_state, predictions.created_at AS created_at_1, officer_decisions.id AS id_2, officer_decisions.report_id AS report_id_1, officer_decisions.officer_id, officer_decisions.officer_role, officer_decisions.decision, officer_decisions.notes, officer_decisions.created_at AS created_at_2 
+FROM reports LEFT OUTER JOIN predictions ON predictions.report_id = reports.id LEFT OUTER JOIN officer_decisions ON officer_decisions.report_id = reports.id ORDER BY predictions.calibrated_prob DESC NULLS LAST
+ LIMIT ? OFFSET ?
+2026-09-21 23:40:28,682 INFO sqlalchemy.engine.Engine [cached since 316.2s ago] (50, 0)
+2026-09-21 23:40:28,779 INFO sqlalchemy.engine.Engine COMMIT
+INFO:     127.0.0.1:56435 - "GET /api/v1/reports?page=1&page_size=50 HTTP/1.1" 200 OK
+2026-09-21 23:40:31,044 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-21 23:40:31,047 INFO sqlalchemy.engine.Engine SELECT reports.id, reports.source_file, reports.site, reports.country, reports.industry_sector, reports.equipment, reports.shift_date, reports.reporter_role, reports.report_text, reports.report_type, reports.critical_risk, reports.ocr_confidence, reports.ingest_status, reports.has_site_metadata, reports.has_equipment_metadata, reports.has_shift_metadata, reports.text_only_mode, reports.lower_confidence_flag, reports.created_at, predictions.id AS id_1, predictions.report_id, predictions.stage1_flagged, predictions.stage1_score, predictions.sif_flag, predictions.calibrated_prob, predictions.confidence_band, predictions.ood_score, predictions.iogp_rules, predictions.cause_categories, predictions.shap_values, predictions.ig_spans, predictions.routing_reason, predictions.operational_state, predictions.created_at AS created_at_1, officer_decisions.id AS id_2, officer_decisions.report_id AS report_id_1, officer_decisions.officer_id, officer_decisions.officer_role, officer_decisions.decision, officer_decisions.notes, officer_decisions.created_at AS created_at_2 
+FROM reports LEFT OUTER JOIN predictions ON predictions.report_id = reports.id LEFT OUTER JOIN officer_decisions ON officer_decisions.report_id = reports.id ORDER BY predictions.calibrated_prob DESC NULLS LAST
+ LIMIT ? OFFSET ?
+2026-09-21 23:40:31,047 INFO sqlalchemy.engine.Engine [cached since 318.5s ago] (50, 0)
+2026-09-21 23:40:31,085 INFO sqlalchemy.engine.Engine COMMIT
+INFO:     127.0.0.1:56435 - "GET /api/v1/reports?page=1&page_size=50 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51002 - "OPTIONS /api/v1/reports?page=1&page_size=50 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52846 - "OPTIONS /api/v1/reports?page=1&page_size=50 HTTP/1.1" 200 OK
+2026-09-21 23:54:50,174 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-21 23:54:50,181 INFO sqlalchemy.engine.Engine SELECT reports.id, reports.source_file, reports.site, reports.country, reports.industry_sector, reports.equipment, reports.shift_date, reports.reporter_role, reports.report_text, reports.report_type, reports.critical_risk, reports.ocr_confidence, reports.ingest_status, reports.has_site_metadata, reports.has_equipment_metadata, reports.has_shift_metadata, reports.text_only_mode, reports.lower_confidence_flag, reports.created_at, predictions.id AS id_1, predictions.report_id, predictions.stage1_flagged, predictions.stage1_score, predictions.sif_flag, predictions.calibrated_prob, predictions.confidence_band, predictions.ood_score, predictions.iogp_rules, predictions.cause_categories, predictions.shap_values, predictions.ig_spans, predictions.routing_reason, predictions.operational_state, predictions.created_at AS created_at_1, officer_decisions.id AS id_2, officer_decisions.report_id AS report_id_1, officer_decisions.officer_id, officer_decisions.officer_role, officer_decisions.decision, officer_decisions.notes, officer_decisions.created_at AS created_at_2 
+FROM reports LEFT OUTER JOIN predictions ON predictions.report_id = reports.id LEFT OUTER JOIN officer_decisions ON officer_decisions.report_id = reports.id ORDER BY predictions.calibrated_prob DESC NULLS LAST
+ LIMIT ? OFFSET ?
+2026-09-21 23:54:50,188 INFO sqlalchemy.engine.Engine [cached since 1178s ago] (50, 0)
+2026-09-21 23:54:50,306 INFO sqlalchemy.engine.Engine COMMIT
+INFO:     127.0.0.1:51002 - "GET /api/v1/reports?page=1&page_size=50 HTTP/1.1" 200 OK
+2026-09-21 23:54:50,335 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-21 23:54:50,335 INFO sqlalchemy.engine.Engine SELECT reports.id, reports.source_file, reports.site, reports.country, reports.industry_sector, reports.equipment, reports.shift_date, reports.reporter_role, reports.report_text, reports.report_type, reports.critical_risk, reports.ocr_confidence, reports.ingest_status, reports.has_site_metadata, reports.has_equipment_metadata, reports.has_shift_metadata, reports.text_only_mode, reports.lower_confidence_flag, reports.created_at, predictions.id AS id_1, predictions.report_id, predictions.stage1_flagged, predictions.stage1_score, predictions.sif_flag, predictions.calibrated_prob, predictions.confidence_band, predictions.ood_score, predictions.iogp_rules, predictions.cause_categories, predictions.shap_values, predictions.ig_spans, predictions.routing_reason, predictions.operational_state, predictions.created_at AS created_at_1, officer_decisions.id AS id_2, officer_decisions.report_id AS report_id_1, officer_decisions.officer_id, officer_decisions.officer_role, officer_decisions.decision, officer_decisions.notes, officer_decisions.created_at AS created_at_2 
+FROM reports LEFT OUTER JOIN predictions ON predictions.report_id = reports.id LEFT OUTER JOIN officer_decisions ON officer_decisions.report_id = reports.id ORDER BY predictions.calibrated_prob DESC NULLS LAST
+ LIMIT ? OFFSET ?
+2026-09-21 23:54:50,335 INFO sqlalchemy.engine.Engine [cached since 1178s ago] (50, 0)
+2026-09-21 23:54:50,407 INFO sqlalchemy.engine.Engine COMMIT
+INFO:     127.0.0.1:52846 - "GET /api/v1/reports?page=1&page_size=50 HTTP/1.1" 200 OK
+2026-09-21 23:54:54,604 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-21 23:54:54,607 INFO sqlalchemy.engine.Engine SELECT reports.id, reports.source_file, reports.site, reports.country, reports.industry_sector, reports.equipment, reports.shift_date, reports.reporter_role, reports.report_text, reports.report_type, reports.critical_risk, reports.ocr_confidence, reports.ingest_status, reports.has_site_metadata, reports.has_equipment_metadata, reports.has_shift_metadata, reports.text_only_mode, reports.lower_confidence_flag, reports.created_at, predictions.id AS id_1, predictions.report_id, predictions.stage1_flagged, predictions.stage1_score, predictions.sif_flag, predictions.calibrated_prob, predictions.confidence_band, predictions.ood_score, predictions.iogp_rules, predictions.cause_categories, predictions.shap_values, predictions.ig_spans, predictions.routing_reason, predictions.operational_state, predictions.created_at AS created_at_1, officer_decisions.id AS id_2, officer_decisions.report_id AS report_id_1, officer_decisions.officer_id, officer_decisions.officer_role, officer_decisions.decision, officer_decisions.notes, officer_decisions.created_at AS created_at_2 
+FROM reports LEFT OUTER JOIN predictions ON predictions.report_id = reports.id LEFT OUTER JOIN officer_decisions ON officer_decisions.report_id = reports.id ORDER BY predictions.calibrated_prob DESC NULLS LAST
+ LIMIT ? OFFSET ?
+2026-09-21 23:54:54,607 INFO sqlalchemy.engine.Engine [cached since 1182s ago] (50, 0)
+2026-09-21 23:54:54,659 INFO sqlalchemy.engine.Engine COMMIT
+INFO:     127.0.0.1:52846 - "GET /api/v1/reports?page=1&page_size=50 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52846 - "OPTIONS /api/v1/score/run?limit=500 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51847 - "POST /api/v1/score/run?limit=500 HTTP/1.1" 200 OK
+2026-09-21 23:55:01,491 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-21 23:55:01,495 INFO sqlalchemy.engine.Engine SELECT reports.id, reports.source_file, reports.site, reports.country, reports.industry_sector, reports.equipment, reports.shift_date, reports.reporter_role, reports.report_text, reports.report_type, reports.critical_risk, reports.ocr_confidence, reports.ingest_status, reports.has_site_metadata, reports.has_equipment_metadata, reports.has_shift_metadata, reports.text_only_mode, reports.lower_confidence_flag, reports.created_at, predictions.id AS id_1, predictions.report_id, predictions.stage1_flagged, predictions.stage1_score, predictions.sif_flag, predictions.calibrated_prob, predictions.confidence_band, predictions.ood_score, predictions.iogp_rules, predictions.cause_categories, predictions.shap_values, predictions.ig_spans, predictions.routing_reason, predictions.operational_state, predictions.created_at AS created_at_1, officer_decisions.id AS id_2, officer_decisions.report_id AS report_id_1, officer_decisions.officer_id, officer_decisions.officer_role, officer_decisions.decision, officer_decisions.notes, officer_decisions.created_at AS created_at_2 
+FROM reports LEFT OUTER JOIN predictions ON predictions.report_id = reports.id LEFT OUTER JOIN officer_decisions ON officer_decisions.report_id = reports.id ORDER BY predictions.calibrated_prob DESC NULLS LAST
+ LIMIT ? OFFSET ?
+2026-09-21 23:55:01,495 INFO sqlalchemy.engine.Engine [cached since 1189s ago] (50, 0)
+2026-09-21 23:55:01,544 INFO sqlalchemy.engine.Engine COMMIT
+INFO:     127.0.0.1:52846 - "GET /api/v1/reports?page=1&page_size=50 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54355 - "OPTIONS /api/v1/queue/manual-review?page=1&page_size=50 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61806 - "OPTIONS /api/v1/queue/manual-review?page=1&page_size=50 HTTP/1.1" 200 OK
+2026-09-21 23:55:13,060 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-21 23:55:13,072 INFO sqlalchemy.engine.Engine SELECT reports.id, reports.source_file, reports.site, reports.country, reports.industry_sector, reports.equipment, reports.shift_date, reports.reporter_role, reports.report_text, reports.report_type, reports.critical_risk, reports.ocr_confidence, reports.ingest_status, reports.has_site_metadata, reports.has_equipment_metadata, reports.has_shift_metadata, reports.text_only_mode, reports.lower_confidence_flag, reports.created_at, predictions.id AS id_1, predictions.report_id, predictions.stage1_flagged, predictions.stage1_score, predictions.sif_flag, predictions.calibrated_prob, predictions.confidence_band, predictions.ood_score, predictions.iogp_rules, predictions.cause_categories, predictions.shap_values, predictions.ig_spans, predictions.routing_reason, predictions.operational_state, predictions.created_at AS created_at_1 
+FROM reports LEFT OUTER JOIN predictions ON predictions.report_id = reports.id 
+WHERE reports.ingest_status = ? OR predictions.confidence_band IN (?, ?, ?) OR reports.lower_confidence_flag = 1
+ LIMIT ? OFFSET ?
+2026-09-21 23:55:13,076 INFO sqlalchemy.engine.Engine [cached since 4869s ago] ('MANUAL_REVIEW', 'LOW', 'AMBIGUOUS', 'OOD', 50, 0)
+2026-09-21 23:55:13,112 INFO sqlalchemy.engine.Engine COMMIT
+INFO:     127.0.0.1:54355 - "GET /api/v1/queue/manual-review?page=1&page_size=50 HTTP/1.1" 200 OK
+2026-09-21 23:55:13,132 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-21 23:55:13,133 INFO sqlalchemy.engine.Engine SELECT reports.id, reports.source_file, reports.site, reports.country, reports.industry_sector, reports.equipment, reports.shift_date, reports.reporter_role, reports.report_text, reports.report_type, reports.critical_risk, reports.ocr_confidence, reports.ingest_status, reports.has_site_metadata, reports.has_equipment_metadata, reports.has_shift_metadata, reports.text_only_mode, reports.lower_confidence_flag, reports.created_at, predictions.id AS id_1, predictions.report_id, predictions.stage1_flagged, predictions.stage1_score, predictions.sif_flag, predictions.calibrated_prob, predictions.confidence_band, predictions.ood_score, predictions.iogp_rules, predictions.cause_categories, predictions.shap_values, predictions.ig_spans, predictions.routing_reason, predictions.operational_state, predictions.created_at AS created_at_1 
+FROM reports LEFT OUTER JOIN predictions ON predictions.report_id = reports.id 
+WHERE reports.ingest_status = ? OR predictions.confidence_band IN (?, ?, ?) OR reports.lower_confidence_flag = 1
+ LIMIT ? OFFSET ?
+2026-09-21 23:55:13,140 INFO sqlalchemy.engine.Engine [cached since 4869s ago] ('MANUAL_REVIEW', 'LOW', 'AMBIGUOUS', 'OOD', 50, 0)
+2026-09-21 23:55:13,162 INFO sqlalchemy.engine.Engine COMMIT
+INFO:     127.0.0.1:61806 - "GET /api/v1/queue/manual-review?page=1&page_size=50 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61806 - "OPTIONS /api/v1/dashboard/leadership HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54355 - "OPTIONS /api/v1/dashboard/site-recall HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63855 - "OPTIONS /api/v1/dashboard/leadership HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65025 - "OPTIONS /api/v1/dashboard/site-recall HTTP/1.1" 200 OK
+2026-09-21 23:55:16,564 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-21 23:55:16,570 INFO sqlalchemy.engine.Engine SELECT reports.site, reports.industry_sector, count(predictions.id) AS total, sum(CASE WHEN (predictions.sif_flag = 1) THEN ? ELSE ? END) AS sif_count, sum(CASE WHEN (predictions.stage1_flagged = 1) THEN ? ELSE ? END) AS flagged_count 
+FROM reports LEFT OUTER JOIN predictions ON predictions.report_id = reports.id GROUP BY reports.site, reports.industry_sector
+2026-09-21 23:55:16,580 INFO sqlalchemy.engine.Engine [cached since 4873s ago] (1, 0, 1, 0)
+2026-09-21 23:55:16,605 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-21 23:55:16,605 INFO sqlalchemy.engine.Engine SELECT reports.site, count(reports.id) AS total, sum(CASE WHEN (features.hi_po = 1) THEN ? ELSE ? END) AS actual_hipo, sum(CASE WHEN (predictions.sif_flag = 1) THEN ? ELSE ? END) AS predicted_sif 
+FROM reports LEFT OUTER JOIN features ON features.report_id = reports.id LEFT OUTER JOIN predictions ON predictions.report_id = reports.id GROUP BY reports.site
+2026-09-21 23:55:16,612 INFO sqlalchemy.engine.Engine [cached since 4873s ago] (1, 0, 1, 0)
+2026-09-21 23:55:16,627 INFO sqlalchemy.engine.Engine SELECT predictions.iogp_rules, predictions.cause_categories 
+FROM predictions 
+WHERE predictions.sif_flag = 1
+2026-09-21 23:55:16,627 INFO sqlalchemy.engine.Engine [cached since 4873s ago] ()
+2026-09-21 23:55:16,640 INFO sqlalchemy.engine.Engine SELECT reports.site, features.barrier_status, count(*) AS count 
+FROM reports JOIN features ON features.report_id = reports.id 
+WHERE features.has_barrier_failure = 1 GROUP BY reports.site, features.barrier_status
+2026-09-21 23:55:16,649 INFO sqlalchemy.engine.Engine [cached since 4873s ago] ()
+2026-09-21 23:55:16,655 INFO sqlalchemy.engine.Engine COMMIT
+2026-09-21 23:55:16,661 INFO sqlalchemy.engine.Engine COMMIT
+INFO:     127.0.0.1:54355 - "GET /api/v1/dashboard/site-recall HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61806 - "GET /api/v1/dashboard/leadership HTTP/1.1" 200 OK
+2026-09-21 23:55:16,680 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-21 23:55:16,694 INFO sqlalchemy.engine.Engine SELECT reports.site, count(reports.id) AS total, sum(CASE WHEN (features.hi_po = 1) THEN ? ELSE ? END) AS actual_hipo, sum(CASE WHEN (predictions.sif_flag = 1) THEN ? ELSE ? END) AS predicted_sif 
+FROM reports LEFT OUTER JOIN features ON features.report_id = reports.id LEFT OUTER JOIN predictions ON predictions.report_id = reports.id GROUP BY reports.site
+2026-09-21 23:55:16,699 INFO sqlalchemy.engine.Engine [cached since 4873s ago] (1, 0, 1, 0)
+2026-09-21 23:55:16,703 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-21 23:55:16,711 INFO sqlalchemy.engine.Engine SELECT reports.site, reports.industry_sector, count(predictions.id) AS total, sum(CASE WHEN (predictions.sif_flag = 1) THEN ? ELSE ? END) AS sif_count, sum(CASE WHEN (predictions.stage1_flagged = 1) THEN ? ELSE ? END) AS flagged_count 
+FROM reports LEFT OUTER JOIN predictions ON predictions.report_id = reports.id GROUP BY reports.site, reports.industry_sector
+2026-09-21 23:55:16,716 INFO sqlalchemy.engine.Engine [cached since 4873s ago] (1, 0, 1, 0)
+2026-09-21 23:55:16,724 INFO sqlalchemy.engine.Engine COMMIT
+INFO:     127.0.0.1:54355 - "GET /api/v1/dashboard/site-recall HTTP/1.1" 200 OK
+2026-09-21 23:55:16,737 INFO sqlalchemy.engine.Engine SELECT predictions.iogp_rules, predictions.cause_categories 
+FROM predictions 
+WHERE predictions.sif_flag = 1
+2026-09-21 23:55:16,744 INFO sqlalchemy.engine.Engine [cached since 4873s ago] ()
+2026-09-21 23:55:16,753 INFO sqlalchemy.engine.Engine SELECT reports.site, features.barrier_status, count(*) AS count 
+FROM reports JOIN features ON features.report_id = reports.id 
+WHERE features.has_barrier_failure = 1 GROUP BY reports.site, features.barrier_status
+2026-09-21 23:55:16,757 INFO sqlalchemy.engine.Engine [cached since 4873s ago] ()
+2026-09-21 23:55:16,766 INFO sqlalchemy.engine.Engine COMMIT
+INFO:     127.0.0.1:65025 - "GET /api/v1/dashboard/leadership HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62089 - "OPTIONS /api/v1/audit-log?page=1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62090 - "OPTIONS /api/v1/audit-log?page=1 HTTP/1.1" 200 OK
+2026-09-21 23:55:24,149 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-21 23:55:24,154 INFO sqlalchemy.engine.Engine SELECT audit_log.id, audit_log.report_id, audit_log.event_type, audit_log.model_score, audit_log.officer_action, audit_log.officer_role, audit_log.metadata_json, audit_log.timestamp 
+FROM audit_log ORDER BY audit_log.timestamp DESC
+ LIMIT ? OFFSET ?
+2026-09-21 23:55:24,160 INFO sqlalchemy.engine.Engine [cached since 4880s ago] (100, 0)
+2026-09-21 23:55:24,225 INFO sqlalchemy.engine.Engine COMMIT
+INFO:     127.0.0.1:62089 - "GET /api/v1/audit-log?page=1 HTTP/1.1" 200 OK
+2026-09-21 23:55:24,245 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-21 23:55:24,252 INFO sqlalchemy.engine.Engine SELECT audit_log.id, audit_log.report_id, audit_log.event_type, audit_log.model_score, audit_log.officer_action, audit_log.officer_role, audit_log.metadata_json, audit_log.timestamp 
+FROM audit_log ORDER BY audit_log.timestamp DESC
+ LIMIT ? OFFSET ?
+2026-09-21 23:55:24,255 INFO sqlalchemy.engine.Engine [cached since 4881s ago] (100, 0)
+2026-09-21 23:55:24,302 INFO sqlalchemy.engine.Engine COMMIT
+INFO:     127.0.0.1:62089 - "GET /api/v1/audit-log?page=1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62089 - "OPTIONS /api/v1/active-learning/queue HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62090 - "OPTIONS /api/v1/active-learning/queue HTTP/1.1" 200 OK
+2026-09-21 23:55:28,200 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-21 23:55:28,208 INFO sqlalchemy.engine.Engine SELECT active_learning_queue.id, active_learning_queue.report_id, active_learning_queue.model_prob, active_learning_queue.queue_reason, active_learning_queue.corrected_sif, active_learning_queue.corrected_iogp, active_learning_queue.corrected_cause, active_learning_queue.labeled_by, active_learning_queue.labeled_at, active_learning_queue.created_at, active_learning_queue.status, reports.id AS id_1, reports.source_file, reports.site, reports.country, reports.industry_sector, reports.equipment, reports.shift_date, reports.reporter_role, reports.report_text, reports.report_type, reports.critical_risk, reports.ocr_confidence, reports.ingest_status, reports.has_site_metadata, reports.has_equipment_metadata, reports.has_shift_metadata, reports.text_only_mode, reports.lower_confidence_flag, reports.created_at AS created_at_1 
+FROM active_learning_queue JOIN reports ON reports.id = active_learning_queue.report_id 
+WHERE active_learning_queue.status = ? ORDER BY active_learning_queue.model_prob
+2026-09-21 23:55:28,212 INFO sqlalchemy.engine.Engine [cached since 4884s ago] ('PENDING',)
+2026-09-21 23:55:28,226 INFO sqlalchemy.engine.Engine COMMIT
+INFO:     127.0.0.1:62089 - "GET /api/v1/active-learning/queue HTTP/1.1" 200 OK
+2026-09-21 23:55:28,251 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-21 23:55:28,251 INFO sqlalchemy.engine.Engine SELECT active_learning_queue.id, active_learning_queue.report_id, active_learning_queue.model_prob, active_learning_queue.queue_reason, active_learning_queue.corrected_sif, active_learning_queue.corrected_iogp, active_learning_queue.corrected_cause, active_learning_queue.labeled_by, active_learning_queue.labeled_at, active_learning_queue.created_at, active_learning_queue.status, reports.id AS id_1, reports.source_file, reports.site, reports.country, reports.industry_sector, reports.equipment, reports.shift_date, reports.reporter_role, reports.report_text, reports.report_type, reports.critical_risk, reports.ocr_confidence, reports.ingest_status, reports.has_site_metadata, reports.has_equipment_metadata, reports.has_shift_metadata, reports.text_only_mode, reports.lower_confidence_flag, reports.created_at AS created_at_1 
+FROM active_learning_queue JOIN reports ON reports.id = active_learning_queue.report_id 
+WHERE active_learning_queue.status = ? ORDER BY active_learning_queue.model_prob
+2026-09-21 23:55:28,260 INFO sqlalchemy.engine.Engine [cached since 4885s ago] ('PENDING',)
+2026-09-21 23:55:28,273 INFO sqlalchemy.engine.Engine COMMIT
+INFO:     127.0.0.1:62089 - "GET /api/v1/active-learning/queue HTTP/1.1" 200 OK
+2026-09-21 23:55:34,426 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-21 23:55:34,427 INFO sqlalchemy.engine.Engine SELECT reports.id, reports.source_file, reports.site, reports.country, reports.industry_sector, reports.equipment, reports.shift_date, reports.reporter_role, reports.report_text, reports.report_type, reports.critical_risk, reports.ocr_confidence, reports.ingest_status, reports.has_site_metadata, reports.has_equipment_metadata, reports.has_shift_metadata, reports.text_only_mode, reports.lower_confidence_flag, reports.created_at, predictions.id AS id_1, predictions.report_id, predictions.stage1_flagged, predictions.stage1_score, predictions.sif_flag, predictions.calibrated_prob, predictions.confidence_band, predictions.ood_score, predictions.iogp_rules, predictions.cause_categories, predictions.shap_values, predictions.ig_spans, predictions.routing_reason, predictions.operational_state, predictions.created_at AS created_at_1 
+FROM reports LEFT OUTER JOIN predictions ON predictions.report_id = reports.id 
+WHERE reports.ingest_status = ? OR predictions.confidence_band IN (?, ?, ?) OR reports.lower_confidence_flag = 1
+ LIMIT ? OFFSET ?
+2026-09-21 23:55:34,431 INFO sqlalchemy.engine.Engine [cached since 4891s ago] ('MANUAL_REVIEW', 'LOW', 'AMBIGUOUS', 'OOD', 50, 0)
+2026-09-21 23:55:34,446 INFO sqlalchemy.engine.Engine COMMIT
+INFO:     127.0.0.1:64306 - "GET /api/v1/queue/manual-review?page=1&page_size=50 HTTP/1.1" 200 OK
+2026-09-21 23:55:34,460 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-21 23:55:34,460 INFO sqlalchemy.engine.Engine SELECT reports.id, reports.source_file, reports.site, reports.country, reports.industry_sector, reports.equipment, reports.shift_date, reports.reporter_role, reports.report_text, reports.report_type, reports.critical_risk, reports.ocr_confidence, reports.ingest_status, reports.has_site_metadata, reports.has_equipment_metadata, reports.has_shift_metadata, reports.text_only_mode, reports.lower_confidence_flag, reports.created_at, predictions.id AS id_1, predictions.report_id, predictions.stage1_flagged, predictions.stage1_score, predictions.sif_flag, predictions.calibrated_prob, predictions.confidence_band, predictions.ood_score, predictions.iogp_rules, predictions.cause_categories, predictions.shap_values, predictions.ig_spans, predictions.routing_reason, predictions.operational_state, predictions.created_at AS created_at_1 
+FROM reports LEFT OUTER JOIN predictions ON predictions.report_id = reports.id 
+WHERE reports.ingest_status = ? OR predictions.confidence_band IN (?, ?, ?) OR reports.lower_confidence_flag = 1
+ LIMIT ? OFFSET ?
+2026-09-21 23:55:34,465 INFO sqlalchemy.engine.Engine [cached since 4891s ago] ('MANUAL_REVIEW', 'LOW', 'AMBIGUOUS', 'OOD', 50, 0)
+2026-09-21 23:55:34,478 INFO sqlalchemy.engine.Engine COMMIT
+INFO:     127.0.0.1:64306 - "GET /api/v1/queue/manual-review?page=1&page_size=50 HTTP/1.1" 200 OK
+2026-09-21 23:55:37,442 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-21 23:55:37,446 INFO sqlalchemy.engine.Engine SELECT reports.id, reports.source_file, reports.site, reports.country, reports.industry_sector, reports.equipment, reports.shift_date, reports.reporter_role, reports.report_text, reports.report_type, reports.critical_risk, reports.ocr_confidence, reports.ingest_status, reports.has_site_metadata, reports.has_equipment_metadata, reports.has_shift_metadata, reports.text_only_mode, reports.lower_confidence_flag, reports.created_at, predictions.id AS id_1, predictions.report_id, predictions.stage1_flagged, predictions.stage1_score, predictions.sif_flag, predictions.calibrated_prob, predictions.confidence_band, predictions.ood_score, predictions.iogp_rules, predictions.cause_categories, predictions.shap_values, predictions.ig_spans, predictions.routing_reason, predictions.operational_state, predictions.created_at AS created_at_1, officer_decisions.id AS id_2, officer_decisions.report_id AS report_id_1, officer_decisions.officer_id, officer_decisions.officer_role, officer_decisions.decision, officer_decisions.notes, officer_decisions.created_at AS created_at_2 
+FROM reports LEFT OUTER JOIN predictions ON predictions.report_id = reports.id LEFT OUTER JOIN officer_decisions ON officer_decisions.report_id = reports.id ORDER BY predictions.calibrated_prob DESC NULLS LAST
+ LIMIT ? OFFSET ?
+2026-09-21 23:55:37,448 INFO sqlalchemy.engine.Engine [cached since 1225s ago] (50, 0)
+2026-09-21 23:55:37,474 INFO sqlalchemy.engine.Engine COMMIT
+INFO:     127.0.0.1:64306 - "GET /api/v1/reports?page=1&page_size=50 HTTP/1.1" 200 OK
+2026-09-21 23:55:37,488 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-21 23:55:37,494 INFO sqlalchemy.engine.Engine SELECT reports.id, reports.source_file, reports.site, reports.country, reports.industry_sector, reports.equipment, reports.shift_date, reports.reporter_role, reports.report_text, reports.report_type, reports.critical_risk, reports.ocr_confidence, reports.ingest_status, reports.has_site_metadata, reports.has_equipment_metadata, reports.has_shift_metadata, reports.text_only_mode, reports.lower_confidence_flag, reports.created_at, predictions.id AS id_1, predictions.report_id, predictions.stage1_flagged, predictions.stage1_score, predictions.sif_flag, predictions.calibrated_prob, predictions.confidence_band, predictions.ood_score, predictions.iogp_rules, predictions.cause_categories, predictions.shap_values, predictions.ig_spans, predictions.routing_reason, predictions.operational_state, predictions.created_at AS created_at_1, officer_decisions.id AS id_2, officer_decisions.report_id AS report_id_1, officer_decisions.officer_id, officer_decisions.officer_role, officer_decisions.decision, officer_decisions.notes, officer_decisions.created_at AS created_at_2 
+FROM reports LEFT OUTER JOIN predictions ON predictions.report_id = reports.id LEFT OUTER JOIN officer_decisions ON officer_decisions.report_id = reports.id ORDER BY predictions.calibrated_prob DESC NULLS LAST
+ LIMIT ? OFFSET ?
+2026-09-21 23:55:37,494 INFO sqlalchemy.engine.Engine [cached since 1225s ago] (50, 0)
+2026-09-21 23:55:37,514 INFO sqlalchemy.engine.Engine COMMIT
+INFO:     127.0.0.1:64306 - "GET /api/v1/reports?page=1&page_size=50 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60446 - "POST /api/v1/score/run?limit=500 HTTP/1.1" 200 OK
+2026-09-21 23:55:48,904 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-21 23:55:48,910 INFO sqlalchemy.engine.Engine SELECT reports.id, reports.source_file, reports.site, reports.country, reports.industry_sector, reports.equipment, reports.shift_date, reports.reporter_role, reports.report_text, reports.report_type, reports.critical_risk, reports.ocr_confidence, reports.ingest_status, reports.has_site_metadata, reports.has_equipment_metadata, reports.has_shift_metadata, reports.text_only_mode, reports.lower_confidence_flag, reports.created_at, predictions.id AS id_1, predictions.report_id, predictions.stage1_flagged, predictions.stage1_score, predictions.sif_flag, predictions.calibrated_prob, predictions.confidence_band, predictions.ood_score, predictions.iogp_rules, predictions.cause_categories, predictions.shap_values, predictions.ig_spans, predictions.routing_reason, predictions.operational_state, predictions.created_at AS created_at_1, officer_decisions.id AS id_2, officer_decisions.report_id AS report_id_1, officer_decisions.officer_id, officer_decisions.officer_role, officer_decisions.decision, officer_decisions.notes, officer_decisions.created_at AS created_at_2 
+FROM reports LEFT OUTER JOIN predictions ON predictions.report_id = reports.id LEFT OUTER JOIN officer_decisions ON officer_decisions.report_id = reports.id ORDER BY predictions.calibrated_prob DESC NULLS LAST
+ LIMIT ? OFFSET ?
+2026-09-21 23:55:48,915 INFO sqlalchemy.engine.Engine [cached since 1236s ago] (50, 0)
+2026-09-21 23:55:48,986 INFO sqlalchemy.engine.Engine COMMIT
+INFO:     127.0.0.1:64392 - "GET /api/v1/reports?page=1&page_size=50 HTTP/1.1" 200 OK
+2026-09-21 23:56:49,219 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-21 23:56:49,282 INFO sqlalchemy.engine.Engine INSERT INTO audit_log (id, report_id, event_type, model_score, officer_action, officer_role, metadata_json, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?, ?), (?, ?, ?, ?, ?, ?, ?, ?), (?, ?, ?, ?, ?, ?, ?, ?), (?, ?, ?, ?, ?, ?, ?, ?), (?, ?, ?, ?, ?, ?, ? ... 10824 characters truncated ... , ?, ?, ?, ?, ?, ?, ?), (?, ?, ?, ?, ?, ?, ?, ?), (?, ?, ?, ?, ?, ?, ?, ?), (?, ?, ?, ?, ?, ?, ?, ?)
+2026-09-21 23:56:49,298 INFO sqlalchemy.engine.Engine [generated in 0.03668s (insertmanyvalues) 1/1 (unordered)] ('1b2a4434-4b8e-4f62-86b6-c18181cb9c32', '091e4061-0777-42ad-b85f-ae6e5232f57e', 'INGESTED', None, None, None, '{"stage1_flagged": true, "stage1_score": 0.4, "rule_triggered": false, "text_only_mode": false, "hi_po": true}', '2026-09-21 18:26:49.250762', '2dde40e7-fd26-49c1-9eb2-cbabff006f0a', '440ea041-5508-443e-8f4a-aeca3ed29b0a', 'INGESTED', None, None, None, '{"stage1_flagged": true, "stage1_score": 0.4, "rule_triggered": false, "text_only_mode": false, "hi_po": true}', '2026-09-21 18:26:49.250762', '3d9b5aee-51a7-4832-94d1-8030ad357172', 'b1b99b66-0c66-4fa2-a5f5-4bb9a4abf0cd', 'INGESTED', None, None, None, '{"stage1_flagged": true, "stage1_score": 0.4, "rule_triggered": false, "text_only_mode": false, "hi_po": false}', '2026-09-21 18:26:49.250762', 'a460a977-e68f-4d40-a004-79ceb84b276e', 'a7f68019-bc4f-4348-84f5-c75b47fe8ddb', 'INGESTED', None, None, None, '{"stage1_flagged": true, "stage1_score": 0.4, "rule_triggered": false, "text_only_mode": false, "hi_po": false}', '2026-09-21 18:26:49.250762', '8a64455a-8d9c-4fd0-bf0a-f184dfaab8f3', '45b7ef74-70b6-42e0-8a7d-ab2aaa82b7b9', 'INGESTED', None, None, None, '{"stage1_flagged": true, "stage1_score": 0.4, "rule_triggered": false, "text_only_mode": false, "hi_po": true}', '2026-09-21 18:26:49.250762', 'ef3a6b36-2949-4127-8ec4-217ade39da1a', '2aba756e-2502-4805-9c24-720ce8e8f182', 'INGESTED', None, None, None, '{"stage1_flagged": true, "stage1_score": 0.4, "rule_triggered": false, "text_only_mode": false, "hi_po": false}', '2026-09-21 18:26:49.250762', '6f03af56-5f62-4d25-aab1-70d9b9d2ae99', 'fb0033e2-8da2-4ba7-b4a8-e18f3613ce18' ... 3300 parameters truncated ... '{"stage1_flagged": true, "stage1_score": 0.4, "rule_triggered": false, "text_only_mode": false, "hi_po": false}', '2026-09-21 18:26:49.266696', '3fd5b547-a495-43b5-a2f4-dcb88150cf53', 'c52ec454-0b3d-4a9a-95bd-1a86e85f7096', 'INGESTED', None, None, None, '{"stage1_flagged": false, "stage1_score": 0.0, "rule_triggered": false, "text_only_mode": false, "hi_po": false}', '2026-09-21 18:26:49.266696', '3780b51d-0b40-4077-b02e-11084087964a', 'ad0de879-41ea-4b2e-ad11-44d50d4cf120', 'INGESTED', None, None, None, '{"stage1_flagged": true, "stage1_score": 0.4, "rule_triggered": false, "text_only_mode": false, "hi_po": false}', '2026-09-21 18:26:49.266696', 'fb7e0eb1-e322-42e5-9c76-07a112e94c8a', '7502af00-4763-4be7-96c8-76da48d00e5b', 'INGESTED', None, None, None, '{"stage1_flagged": true, "stage1_score": 0.4, "rule_triggered": false, "text_only_mode": false, "hi_po": false}', '2026-09-21 18:26:49.266696', '183a9346-a846-44fe-83b4-562cc97ac17c', 'abc13918-fcab-43c6-961b-a3d81435d006', 'INGESTED', None, None, None, '{"stage1_flagged": false, "stage1_score": 0.0, "rule_triggered": false, "text_only_mode": false, "hi_po": false}', '2026-09-21 18:26:49.266696', '8fbbf130-abc8-442e-9f49-1aab5c63616f', '6bdcc12e-d76d-4512-b453-147e0a001e66', 'INGESTED', None, None, None, '{"stage1_flagged": true, "stage1_score": 0.4, "rule_triggered": false, "text_only_mode": false, "hi_po": false}', '2026-09-21 18:26:49.266696', 'bceb40af-871e-4f45-9001-dec0c562bad2', '1d124972-ad6d-4cba-a697-adacd76c5c31', 'INGESTED', None, None, None, '{"stage1_flagged": true, "stage1_score": 0.4, "rule_triggered": false, "text_only_mode": false, "hi_po": false}', '2026-09-21 18:26:49.266696')
+2026-09-21 23:56:49,394 INFO sqlalchemy.engine.Engine INSERT INTO reports (id, source_file, site, country, industry_sector, equipment, shift_date, reporter_role, report_text, report_type, critical_risk, ocr_confidence, ingest_status, has_site_metadata, has_equipment_metadata, has_shift_metadata, text_only_mode, lower_confidence_flag, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+2026-09-21 23:56:49,410 INFO sqlalchemy.engine.Engine [generated in 0.02720s] [('091e4061-0777-42ad-b85f-ae6e5232f57e', None, 'Local_01', 'Country_01', 'Mining', None, '2016-01-01 00:00:00.000000', 'Third Party', 'While removing the drill rod of the Jumbo 08 for maintenance, the supervisor proceeds to loosen the support of the intermediate centralizer to facili ... (159 characters truncated) ...  at this moment the bar slides from its point of support and tightens the fingers of the mechanic between the drilling bar and the beam of the jumbo.', None, 'Pressed', 1.0, 'PROCESSABLE', 1, 1, 1, 0, 0, '2026-09-21 18:26:49.378499'), ('440ea041-5508-443e-8f4a-aeca3ed29b0a', None, 'Local_02', 'Country_02', 'Mining', None, '2016-01-02 00:00:00.000000', 'Employee', 'During the activation of a sodium sulphide pump, the piping was uncoupled and the sulfide solution was designed in the area to reach the maid. Immedi ... (9 characters truncated) ...  made use of the emergency shower and was directed to the ambulatory doctor and later to the hospital. Note: of sulphide solution = 48 grams / liter.', None, 'Pressurized Systems', 1.0, 'PROCESSABLE', 1, 1, 1, 0, 0, '2026-09-21 18:26:49.378499'), ('b1b99b66-0c66-4fa2-a5f5-4bb9a4abf0cd', None, 'Local_03', 'Country_01', 'Mining', None, '2016-01-06 00:00:00.000000', 'Third Party (Remote)', 'In the sub-station MILPO located at level +170 when the collaborator was doing the excavation work with a pick (hand tool), hitting a rock with the f ... (26 characters truncated) ... ounces off hitting the steel tip of the safety shoe and then the metatarsal area of \u200b\u200bthe left foot of the collaborator causing the injury.', None, 'Manual Tools', 1.0, 'PROCESSABLE', 1, 1, 1, 0, 0, '2026-09-21 18:26:49.378499'), ('a7f68019-bc4f-4348-84f5-c75b47fe8ddb', None, 'Local_04', 'Country_01', 'Mining', None, '2016-01-08 00:00:00.000000', 'Third Party', 'Being 9:45 am. approximately in the Nv. 1880 CX-695 OB7, the personnel begins the task of unlocking the Soquet bolts of the BHB machine, when they we ... (264 characters truncated) ...  collaborators rotate with the lever in anti-clockwise direction, leaving the key of the bolt, hitting the palm of the left hand, causing the injury.', None, 'Others', 1.0, 'PROCESSABLE', 1, 1, 1, 0, 0, '2026-09-21 18:26:49.378499'), ('45b7ef74-70b6-42e0-8a7d-ab2aaa82b7b9', None, 'Local_04', 'Country_01', 'Mining', None, '2016-01-10 00:00:00.000000', 'Third Party', 'Approximately at 11:45 a.m. in circumstances that the mechanics Anthony (group leader), Eduardo and Eric Fernández-injured-the three of the Company I ... (189 characters truncated) ... sen it, it comes out and falls from a distance of 1.06 meters high and hits the instep of the right foot of the worker, causing the injury described.', None, 'Others', 1.0, 'PROCESSABLE', 1, 1, 1, 0, 0, '2026-09-21 18:26:49.378499'), ('2aba756e-2502-4805-9c24-720ce8e8f182', None, 'Local_05', 'Country_02', 'Metals', None, '2016-01-12 00:00:00.000000', 'Third Party (Remote)', 'During the unloading operation of the ustulado Bag there was a need to unclog the discharge mouth of the silo truck. In performing this procedure, th ... (18 characters truncated) ...  of unhooking the hose without the total depressurisation of the mouth, projecting ustulado powder in the collaborator caused irritation in the eyes.', None, 'Pressurized Systems', 1.0, 'PROCESSABLE', 1, 1, 1, 0, 0, '2026-09-21 18:26:49.378499'), ('fb0033e2-8da2-4ba7-b4a8-e18f3613ce18', None, 'Local_05', 'Country_02', 'Metals', None, '2016-01-16 00:00:00.000000', 'Employee', 'The collaborator reports that he was on street 09 holding in his left hand the volumetric balloon, when he slipped and when placing his hand on the ground the volumetric balloon ended up breaking caused a small wound in his left hand.', None, 'Fall prevention (same level)', 1.0, 'PROCESSABLE', 1, 1, 1, 0, 0, '2026-09-21 18:26:49.378499'), ('de851206-3029-406b-8499-0810034917b5', None, 'Local_04', 'Country_01', 'Mining', None, '2016-01-17 00:00:00.000000', 'Third Party', 'At approximately 04:50 p.m., when the mechanic technician José of the Tecnomin verified the transmission belts of the HM-100 pump at the Acid plant,  ... (60 characters truncated) ... at instant the electrician supervisor Miguel of the EKA Mining grabs the transmission belts to verify their tension, at which point the finger traps.', None, 'Pressed', 1.0, 'PROCESSABLE', 1, 1, 1, 0, 0, '2026-09-21 18:26:49.378499')  ... displaying 10 of 425 total bound parameter sets ...  ('6bdcc12e-d76d-4512-b453-147e0a001e66', None, 'Local_05', 'Country_02', 'Metals', None, '2017-07-06 00:00:00.000000', 'Employee', 'The Employee performed the activity of stripping cathodes, when pulling the cathode sheet his hand hit the side of another cathode, causing a blunt cut on his 2nd finger of the left hand.', None, 'Cut', 1.0, 'PROCESSABLE', 1, 1, 1, 0, 0, '2026-09-21 18:26:49.378499'), ('1d124972-ad6d-4cba-a697-adacd76c5c31', None, 'Local_04', 'Country_01', 'Mining', None, '2017-07-09 00:00:00.000000', 'Third Party', 'At 10:00 a.m., when the assistant cleaned the floor of module "E" in the central camp, she slipped back and immediately grabbed the laundry table to avoid falling to the floor; suffering the described injury.', None, 'Fall prevention (same level)', 1.0, 'PROCESSABLE', 1, 1, 1, 0, 0, '2026-09-21 18:26:49.378499')]
+2026-09-21 23:56:49,522 INFO sqlalchemy.engine.Engine INSERT INTO features (id, report_id, energy_types, barrier_phrases, barrier_status, hazard_categories, safety_mgmt_terms, equipment_terms, interlock_bypass_detected, has_energy_signal, has_barrier_failure, hi_po, accident_level, potential_accident_le ... 19897 characters truncated ...  ?, ?), (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?), (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+2026-09-21 23:56:49,537 INFO sqlalchemy.engine.Engine [generated in 0.05406s (insertmanyvalues) 1/1 (unordered)] ('ac2b7e10-e1ac-4974-9720-3fc12cf10440', '091e4061-0777-42ad-b85f-ae6e5232f57e', '["mechanical"]', '[]', 'UNKNOWN', '[]', '[]', '[]', 0, 1, 0, 1, 'I', 'IV', '2026-09-21 18:26:49.476138', '1fca25b9-fd14-4b60-840c-f61781a548e4', '440ea041-5508-443e-8f4a-aeca3ed29b0a', '["chemical"]', '[]', 'UNKNOWN', '[]', '[]', '[]', 0, 1, 0, 1, 'I', 'IV', '2026-09-21 18:26:49.476138', '390c450e-0505-4504-a122-dd1b8eeb067f', 'b1b99b66-0c66-4fa2-a5f5-4bb9a4abf0cd', '["manual_tools"]', '[]', 'UNKNOWN', '[]', '[]', '[]', 0, 1, 0, 0, 'I', 'III', '2026-09-21 18:26:49.476138', '850f1f29-d5fc-424f-adb8-aa90e322e202', 'a7f68019-bc4f-4348-84f5-c75b47fe8ddb', '["pressure", "mechanical", "gravity_fall", "manual_tools"]', '[]', 'UNKNOWN' ... 6275 parameters truncated ... 0, 0, 'I', 'II', '2026-09-21 18:26:49.490324', 'cf7f4530-1688-4fed-a328-c3f7ab96e48a', 'abc13918-fcab-43c6-961b-a3d81435d006', '[]', '[]', 'UNKNOWN', '["environmental"]', '[]', '[]', 0, 0, 0, 0, 'I', 'II', '2026-09-21 18:26:49.490324', '393b0885-b7f7-4251-a145-9c48d90811d0', '6bdcc12e-d76d-4512-b453-147e0a001e66', '["gravity_fall"]', '[]', 'UNKNOWN', '[]', '[]', '[]', 0, 1, 0, 0, 'I', 'II', '2026-09-21 18:26:49.490324', '37e7d801-ddde-4dfb-8cf6-091954013c83', '1d124972-ad6d-4cba-a697-adacd76c5c31', '["gravity_fall"]', '[]', 'UNKNOWN', '[]', '[]', '[]', 0, 1, 0, 0, 'I', 'II', '2026-09-21 18:26:49.490324')
+2026-09-21 23:56:49,618 INFO sqlalchemy.engine.Engine INSERT INTO predictions (id, report_id, stage1_flagged, stage1_score, sif_flag, calibrated_prob, confidence_band, ood_score, routing_reason, operational_state, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?), (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?), ( ... 14702 characters truncated ...  ?, ?, ?, ?, ?, ?, ?, ?, ?, ?), (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?), (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+2026-09-21 23:56:49,633 INFO sqlalchemy.engine.Engine [generated in 0.02689s (insertmanyvalues) 1/1 (unordered)] ('3475274c-782f-4e07-970d-a3b38f76ba2e', '091e4061-0777-42ad-b85f-ae6e5232f57e', 1, 0.4, None, None, None, None, None, 'FLAGGED', '2026-09-21 18:26:49.601602', '3d2a6b33-77e2-4d90-b74b-3d3b23cacbb9', '440ea041-5508-443e-8f4a-aeca3ed29b0a', 1, 0.4, None, None, None, None, None, 'FLAGGED', '2026-09-21 18:26:49.601602', '2797ed04-167e-4ae3-a03a-09a1266d5ae9', 'b1b99b66-0c66-4fa2-a5f5-4bb9a4abf0cd', 1, 0.4, None, None, None, None, None, 'FLAGGED', '2026-09-21 18:26:49.601602', '19c16f66-19b8-4249-b6da-45f41f264414', 'a7f68019-bc4f-4348-84f5-c75b47fe8ddb', 1, 0.4, None, None, None, None, None, 'FLAGGED', '2026-09-21 18:26:49.601602', '5d35ac62-5bd8-4666-b762-f358624de02d', '45b7ef74-70b6-42e0-8a7d-ab2aaa82b7b9', 1, 0.4, None, None ... 4575 parameters truncated ... None, None, None, None, 'FLAGGED', '2026-09-21 18:26:49.618032', 'c905e3d7-96af-4d2d-a962-2853d9872c9c', '7502af00-4763-4be7-96c8-76da48d00e5b', 1, 0.4, None, None, None, None, None, 'FLAGGED', '2026-09-21 18:26:49.618032', '07841cab-e839-4100-8c50-b3fff8d48d0c', 'abc13918-fcab-43c6-961b-a3d81435d006', 0, 0.0, None, None, None, None, None, 'NON_SIF', '2026-09-21 18:26:49.618032', '9c3c78db-8064-43fd-afa3-12228a3ef476', '6bdcc12e-d76d-4512-b453-147e0a001e66', 1, 0.4, None, None, None, None, None, 'FLAGGED', '2026-09-21 18:26:49.618032', '47284869-ad44-4cb8-bc5b-c8ce626aeba0', '1d124972-ad6d-4cba-a697-adacd76c5c31', 1, 0.4, None, None, None, None, None, 'FLAGGED', '2026-09-21 18:26:49.618032')
+2026-09-21 23:56:49,730 INFO sqlalchemy.engine.Engine COMMIT
+INFO:     127.0.0.1:56847 - "POST /api/v1/ingest HTTP/1.1" 200 OK
+2026-09-21 23:57:04,091 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-21 23:57:04,098 INFO sqlalchemy.engine.Engine SELECT reports.id, reports.source_file, reports.site, reports.country, reports.industry_sector, reports.equipment, reports.shift_date, reports.reporter_role, reports.report_text, reports.report_type, reports.critical_risk, reports.ocr_confidence, reports.ingest_status, reports.has_site_metadata, reports.has_equipment_metadata, reports.has_shift_metadata, reports.text_only_mode, reports.lower_confidence_flag, reports.created_at, predictions.id AS id_1, predictions.report_id, predictions.stage1_flagged, predictions.stage1_score, predictions.sif_flag, predictions.calibrated_prob, predictions.confidence_band, predictions.ood_score, predictions.iogp_rules, predictions.cause_categories, predictions.shap_values, predictions.ig_spans, predictions.routing_reason, predictions.operational_state, predictions.created_at AS created_at_1, officer_decisions.id AS id_2, officer_decisions.report_id AS report_id_1, officer_decisions.officer_id, officer_decisions.officer_role, officer_decisions.decision, officer_decisions.notes, officer_decisions.created_at AS created_at_2 
+FROM reports LEFT OUTER JOIN predictions ON predictions.report_id = reports.id LEFT OUTER JOIN officer_decisions ON officer_decisions.report_id = reports.id ORDER BY predictions.calibrated_prob DESC NULLS LAST
+ LIMIT ? OFFSET ?
+2026-09-21 23:57:04,098 INFO sqlalchemy.engine.Engine [cached since 1312s ago] (50, 0)
+2026-09-21 23:57:04,119 INFO sqlalchemy.engine.Engine COMMIT
+INFO:     127.0.0.1:64806 - "GET /api/v1/reports?page=1&page_size=50 HTTP/1.1" 200 OK
+2026-09-21 23:57:04,134 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-21 23:57:04,141 INFO sqlalchemy.engine.Engine SELECT reports.id, reports.source_file, reports.site, reports.country, reports.industry_sector, reports.equipment, reports.shift_date, reports.reporter_role, reports.report_text, reports.report_type, reports.critical_risk, reports.ocr_confidence, reports.ingest_status, reports.has_site_metadata, reports.has_equipment_metadata, reports.has_shift_metadata, reports.text_only_mode, reports.lower_confidence_flag, reports.created_at, predictions.id AS id_1, predictions.report_id, predictions.stage1_flagged, predictions.stage1_score, predictions.sif_flag, predictions.calibrated_prob, predictions.confidence_band, predictions.ood_score, predictions.iogp_rules, predictions.cause_categories, predictions.shap_values, predictions.ig_spans, predictions.routing_reason, predictions.operational_state, predictions.created_at AS created_at_1, officer_decisions.id AS id_2, officer_decisions.report_id AS report_id_1, officer_decisions.officer_id, officer_decisions.officer_role, officer_decisions.decision, officer_decisions.notes, officer_decisions.created_at AS created_at_2 
+FROM reports LEFT OUTER JOIN predictions ON predictions.report_id = reports.id LEFT OUTER JOIN officer_decisions ON officer_decisions.report_id = reports.id ORDER BY predictions.calibrated_prob DESC NULLS LAST
+ LIMIT ? OFFSET ?
+2026-09-21 23:57:04,141 INFO sqlalchemy.engine.Engine [cached since 1312s ago] (50, 0)
+2026-09-21 23:57:04,160 INFO sqlalchemy.engine.Engine COMMIT
+INFO:     127.0.0.1:64806 - "GET /api/v1/reports?page=1&page_size=50 HTTP/1.1" 200 OK
+2026-09-21 23:57:08,435 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-21 23:57:08,440 INFO sqlalchemy.engine.Engine SELECT reports.id, reports.source_file, reports.site, reports.country, reports.industry_sector, reports.equipment, reports.shift_date, reports.reporter_role, reports.report_text, reports.report_type, reports.critical_risk, reports.ocr_confidence, reports.ingest_status, reports.has_site_metadata, reports.has_equipment_metadata, reports.has_shift_metadata, reports.text_only_mode, reports.lower_confidence_flag, reports.created_at, predictions.id AS id_1, predictions.report_id, predictions.stage1_flagged, predictions.stage1_score, predictions.sif_flag, predictions.calibrated_prob, predictions.confidence_band, predictions.ood_score, predictions.iogp_rules, predictions.cause_categories, predictions.shap_values, predictions.ig_spans, predictions.routing_reason, predictions.operational_state, predictions.created_at AS created_at_1, officer_decisions.id AS id_2, officer_decisions.report_id AS report_id_1, officer_decisions.officer_id, officer_decisions.officer_role, officer_decisions.decision, officer_decisions.notes, officer_decisions.created_at AS created_at_2 
+FROM reports LEFT OUTER JOIN predictions ON predictions.report_id = reports.id LEFT OUTER JOIN officer_decisions ON officer_decisions.report_id = reports.id ORDER BY predictions.calibrated_prob DESC NULLS LAST
+ LIMIT ? OFFSET ?
+2026-09-21 23:57:08,445 INFO sqlalchemy.engine.Engine [cached since 1316s ago] (50, 0)
+2026-09-21 23:57:08,473 INFO sqlalchemy.engine.Engine COMMIT
+INFO:     127.0.0.1:64806 - "GET /api/v1/reports?page=1&page_size=50 HTTP/1.1" 200 OK
+2026-09-21 23:57:09,348 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-21 23:57:09,350 INFO sqlalchemy.engine.Engine SELECT reports.id, reports.source_file, reports.site, reports.country, reports.industry_sector, reports.equipment, reports.shift_date, reports.reporter_role, reports.report_text, reports.report_type, reports.critical_risk, reports.ocr_confidence, reports.ingest_status, reports.has_site_metadata, reports.has_equipment_metadata, reports.has_shift_metadata, reports.text_only_mode, reports.lower_confidence_flag, reports.created_at, predictions.id AS id_1, predictions.report_id, predictions.stage1_flagged, predictions.stage1_score, predictions.sif_flag, predictions.calibrated_prob, predictions.confidence_band, predictions.ood_score, predictions.iogp_rules, predictions.cause_categories, predictions.shap_values, predictions.ig_spans, predictions.routing_reason, predictions.operational_state, predictions.created_at AS created_at_1, officer_decisions.id AS id_2, officer_decisions.report_id AS report_id_1, officer_decisions.officer_id, officer_decisions.officer_role, officer_decisions.decision, officer_decisions.notes, officer_decisions.created_at AS created_at_2 
+FROM reports LEFT OUTER JOIN predictions ON predictions.report_id = reports.id LEFT OUTER JOIN officer_decisions ON officer_decisions.report_id = reports.id ORDER BY predictions.calibrated_prob DESC NULLS LAST
+ LIMIT ? OFFSET ?
+2026-09-21 23:57:09,352 INFO sqlalchemy.engine.Engine [cached since 1317s ago] (50, 0)
+2026-09-21 23:57:09,375 INFO sqlalchemy.engine.Engine COMMIT
+INFO:     127.0.0.1:64806 - "GET /api/v1/reports?page=1&page_size=50 HTTP/1.1" 200 OK
+2026-09-21 23:57:09,561 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-21 23:57:09,570 INFO sqlalchemy.engine.Engine SELECT reports.id, reports.source_file, reports.site, reports.country, reports.industry_sector, reports.equipment, reports.shift_date, reports.reporter_role, reports.report_text, reports.report_type, reports.critical_risk, reports.ocr_confidence, reports.ingest_status, reports.has_site_metadata, reports.has_equipment_metadata, reports.has_shift_metadata, reports.text_only_mode, reports.lower_confidence_flag, reports.created_at, predictions.id AS id_1, predictions.report_id, predictions.stage1_flagged, predictions.stage1_score, predictions.sif_flag, predictions.calibrated_prob, predictions.confidence_band, predictions.ood_score, predictions.iogp_rules, predictions.cause_categories, predictions.shap_values, predictions.ig_spans, predictions.routing_reason, predictions.operational_state, predictions.created_at AS created_at_1, officer_decisions.id AS id_2, officer_decisions.report_id AS report_id_1, officer_decisions.officer_id, officer_decisions.officer_role, officer_decisions.decision, officer_decisions.notes, officer_decisions.created_at AS created_at_2 
+FROM reports LEFT OUTER JOIN predictions ON predictions.report_id = reports.id LEFT OUTER JOIN officer_decisions ON officer_decisions.report_id = reports.id ORDER BY predictions.calibrated_prob DESC NULLS LAST
+ LIMIT ? OFFSET ?
+2026-09-21 23:57:09,572 INFO sqlalchemy.engine.Engine [cached since 1317s ago] (50, 0)
+2026-09-21 23:57:09,591 INFO sqlalchemy.engine.Engine COMMIT
+INFO:     127.0.0.1:64806 - "GET /api/v1/reports?page=1&page_size=50 HTTP/1.1" 200 OK
+2026-09-21 23:57:09,772 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-21 23:57:09,777 INFO sqlalchemy.engine.Engine SELECT reports.id, reports.source_file, reports.site, reports.country, reports.industry_sector, reports.equipment, reports.shift_date, reports.reporter_role, reports.report_text, reports.report_type, reports.critical_risk, reports.ocr_confidence, reports.ingest_status, reports.has_site_metadata, reports.has_equipment_metadata, reports.has_shift_metadata, reports.text_only_mode, reports.lower_confidence_flag, reports.created_at, predictions.id AS id_1, predictions.report_id, predictions.stage1_flagged, predictions.stage1_score, predictions.sif_flag, predictions.calibrated_prob, predictions.confidence_band, predictions.ood_score, predictions.iogp_rules, predictions.cause_categories, predictions.shap_values, predictions.ig_spans, predictions.routing_reason, predictions.operational_state, predictions.created_at AS created_at_1, officer_decisions.id AS id_2, officer_decisions.report_id AS report_id_1, officer_decisions.officer_id, officer_decisions.officer_role, officer_decisions.decision, officer_decisions.notes, officer_decisions.created_at AS created_at_2 
+FROM reports LEFT OUTER JOIN predictions ON predictions.report_id = reports.id LEFT OUTER JOIN officer_decisions ON officer_decisions.report_id = reports.id ORDER BY predictions.calibrated_prob DESC NULLS LAST
+ LIMIT ? OFFSET ?
+2026-09-21 23:57:09,779 INFO sqlalchemy.engine.Engine [cached since 1317s ago] (50, 0)
+2026-09-21 23:57:09,800 INFO sqlalchemy.engine.Engine COMMIT
+INFO:     127.0.0.1:64806 - "GET /api/v1/reports?page=1&page_size=50 HTTP/1.1" 200 OK
+2026-09-21 23:57:21,940 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-21 23:57:21,953 INFO sqlalchemy.engine.Engine SELECT reports.site, reports.industry_sector, count(predictions.id) AS total, sum(CASE WHEN (predictions.sif_flag = 1) THEN ? ELSE ? END) AS sif_count, sum(CASE WHEN (predictions.stage1_flagged = 1) THEN ? ELSE ? END) AS flagged_count 
+FROM reports LEFT OUTER JOIN predictions ON predictions.report_id = reports.id GROUP BY reports.site, reports.industry_sector
+2026-09-21 23:57:21,953 INFO sqlalchemy.engine.Engine [cached since 4998s ago] (1, 0, 1, 0)
+2026-09-21 23:57:21,968 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-21 23:57:21,968 INFO sqlalchemy.engine.Engine SELECT reports.site, count(reports.id) AS total, sum(CASE WHEN (features.hi_po = 1) THEN ? ELSE ? END) AS actual_hipo, sum(CASE WHEN (predictions.sif_flag = 1) THEN ? ELSE ? END) AS predicted_sif 
+FROM reports LEFT OUTER JOIN features ON features.report_id = reports.id LEFT OUTER JOIN predictions ON predictions.report_id = reports.id GROUP BY reports.site
+2026-09-21 23:57:21,984 INFO sqlalchemy.engine.Engine [cached since 4998s ago] (1, 0, 1, 0)
+2026-09-21 23:57:21,984 INFO sqlalchemy.engine.Engine SELECT predictions.iogp_rules, predictions.cause_categories 
+FROM predictions 
+WHERE predictions.sif_flag = 1
+2026-09-21 23:57:21,984 INFO sqlalchemy.engine.Engine [cached since 4998s ago] ()
+2026-09-21 23:57:22,002 INFO sqlalchemy.engine.Engine SELECT reports.site, features.barrier_status, count(*) AS count 
+FROM reports JOIN features ON features.report_id = reports.id 
+WHERE features.has_barrier_failure = 1 GROUP BY reports.site, features.barrier_status
+2026-09-21 23:57:22,002 INFO sqlalchemy.engine.Engine [cached since 4998s ago] ()
+2026-09-21 23:57:22,018 INFO sqlalchemy.engine.Engine COMMIT
+2026-09-21 23:57:22,028 INFO sqlalchemy.engine.Engine COMMIT
+INFO:     127.0.0.1:57710 - "GET /api/v1/dashboard/site-recall HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55567 - "GET /api/v1/dashboard/leadership HTTP/1.1" 200 OK
+2026-09-21 23:57:22,055 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-21 23:57:22,062 INFO sqlalchemy.engine.Engine SELECT reports.site, count(reports.id) AS total, sum(CASE WHEN (features.hi_po = 1) THEN ? ELSE ? END) AS actual_hipo, sum(CASE WHEN (predictions.sif_flag = 1) THEN ? ELSE ? END) AS predicted_sif 
+FROM reports LEFT OUTER JOIN features ON features.report_id = reports.id LEFT OUTER JOIN predictions ON predictions.report_id = reports.id GROUP BY reports.site
+2026-09-21 23:57:22,062 INFO sqlalchemy.engine.Engine [cached since 4998s ago] (1, 0, 1, 0)
+2026-09-21 23:57:22,070 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-21 23:57:22,076 INFO sqlalchemy.engine.Engine SELECT reports.site, reports.industry_sector, count(predictions.id) AS total, sum(CASE WHEN (predictions.sif_flag = 1) THEN ? ELSE ? END) AS sif_count, sum(CASE WHEN (predictions.stage1_flagged = 1) THEN ? ELSE ? END) AS flagged_count 
+FROM reports LEFT OUTER JOIN predictions ON predictions.report_id = reports.id GROUP BY reports.site, reports.industry_sector
+2026-09-21 23:57:22,079 INFO sqlalchemy.engine.Engine [cached since 4999s ago] (1, 0, 1, 0)
+2026-09-21 23:57:22,087 INFO sqlalchemy.engine.Engine COMMIT
+INFO:     127.0.0.1:57710 - "GET /api/v1/dashboard/site-recall HTTP/1.1" 200 OK
+2026-09-21 23:57:22,097 INFO sqlalchemy.engine.Engine SELECT predictions.iogp_rules, predictions.cause_categories 
+FROM predictions 
+WHERE predictions.sif_flag = 1
+2026-09-21 23:57:22,102 INFO sqlalchemy.engine.Engine [cached since 4999s ago] ()
+2026-09-21 23:57:22,105 INFO sqlalchemy.engine.Engine SELECT reports.site, features.barrier_status, count(*) AS count 
+FROM reports JOIN features ON features.report_id = reports.id 
+WHERE features.has_barrier_failure = 1 GROUP BY reports.site, features.barrier_status
+2026-09-21 23:57:22,111 INFO sqlalchemy.engine.Engine [cached since 4999s ago] ()
+2026-09-21 23:57:22,120 INFO sqlalchemy.engine.Engine COMMIT
+INFO:     127.0.0.1:55567 - "GET /api/v1/dashboard/leadership HTTP/1.1" 200 OK
+2026-09-21 23:57:33,314 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-21 23:57:33,317 INFO sqlalchemy.engine.Engine SELECT reports.id, reports.source_file, reports.site, reports.country, reports.industry_sector, reports.equipment, reports.shift_date, reports.reporter_role, reports.report_text, reports.report_type, reports.critical_risk, reports.ocr_confidence, reports.ingest_status, reports.has_site_metadata, reports.has_equipment_metadata, reports.has_shift_metadata, reports.text_only_mode, reports.lower_confidence_flag, reports.created_at, predictions.id AS id_1, predictions.report_id, predictions.stage1_flagged, predictions.stage1_score, predictions.sif_flag, predictions.calibrated_prob, predictions.confidence_band, predictions.ood_score, predictions.iogp_rules, predictions.cause_categories, predictions.shap_values, predictions.ig_spans, predictions.routing_reason, predictions.operational_state, predictions.created_at AS created_at_1 
+FROM reports LEFT OUTER JOIN predictions ON predictions.report_id = reports.id 
+WHERE reports.ingest_status = ? OR predictions.confidence_band IN (?, ?, ?) OR reports.lower_confidence_flag = 1
+ LIMIT ? OFFSET ?
+2026-09-21 23:57:33,320 INFO sqlalchemy.engine.Engine [cached since 5010s ago] ('MANUAL_REVIEW', 'LOW', 'AMBIGUOUS', 'OOD', 50, 0)
+2026-09-21 23:57:33,336 INFO sqlalchemy.engine.Engine COMMIT
+INFO:     127.0.0.1:64133 - "GET /api/v1/queue/manual-review?page=1&page_size=50 HTTP/1.1" 200 OK
+2026-09-21 23:57:33,355 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-21 23:57:33,355 INFO sqlalchemy.engine.Engine SELECT reports.id, reports.source_file, reports.site, reports.country, reports.industry_sector, reports.equipment, reports.shift_date, reports.reporter_role, reports.report_text, reports.report_type, reports.critical_risk, reports.ocr_confidence, reports.ingest_status, reports.has_site_metadata, reports.has_equipment_metadata, reports.has_shift_metadata, reports.text_only_mode, reports.lower_confidence_flag, reports.created_at, predictions.id AS id_1, predictions.report_id, predictions.stage1_flagged, predictions.stage1_score, predictions.sif_flag, predictions.calibrated_prob, predictions.confidence_band, predictions.ood_score, predictions.iogp_rules, predictions.cause_categories, predictions.shap_values, predictions.ig_spans, predictions.routing_reason, predictions.operational_state, predictions.created_at AS created_at_1 
+FROM reports LEFT OUTER JOIN predictions ON predictions.report_id = reports.id 
+WHERE reports.ingest_status = ? OR predictions.confidence_band IN (?, ?, ?) OR reports.lower_confidence_flag = 1
+ LIMIT ? OFFSET ?
+2026-09-21 23:57:33,355 INFO sqlalchemy.engine.Engine [cached since 5010s ago] ('MANUAL_REVIEW', 'LOW', 'AMBIGUOUS', 'OOD', 50, 0)
+2026-09-21 23:57:33,373 INFO sqlalchemy.engine.Engine COMMIT
+INFO:     127.0.0.1:64133 - "GET /api/v1/queue/manual-review?page=1&page_size=50 HTTP/1.1" 200 OK
+2026-09-21 23:57:38,287 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-21 23:57:38,294 INFO sqlalchemy.engine.Engine SELECT reports.id, reports.source_file, reports.site, reports.country, reports.industry_sector, reports.equipment, reports.shift_date, reports.reporter_role, reports.report_text, reports.report_type, reports.critical_risk, reports.ocr_confidence, reports.ingest_status, reports.has_site_metadata, reports.has_equipment_metadata, reports.has_shift_metadata, reports.text_only_mode, reports.lower_confidence_flag, reports.created_at, predictions.id AS id_1, predictions.report_id, predictions.stage1_flagged, predictions.stage1_score, predictions.sif_flag, predictions.calibrated_prob, predictions.confidence_band, predictions.ood_score, predictions.iogp_rules, predictions.cause_categories, predictions.shap_values, predictions.ig_spans, predictions.routing_reason, predictions.operational_state, predictions.created_at AS created_at_1, officer_decisions.id AS id_2, officer_decisions.report_id AS report_id_1, officer_decisions.officer_id, officer_decisions.officer_role, officer_decisions.decision, officer_decisions.notes, officer_decisions.created_at AS created_at_2 
+FROM reports LEFT OUTER JOIN predictions ON predictions.report_id = reports.id LEFT OUTER JOIN officer_decisions ON officer_decisions.report_id = reports.id ORDER BY predictions.calibrated_prob DESC NULLS LAST
+ LIMIT ? OFFSET ?
+2026-09-21 23:57:38,296 INFO sqlalchemy.engine.Engine [cached since 1346s ago] (50, 0)
+2026-09-21 23:57:38,314 INFO sqlalchemy.engine.Engine COMMIT
+INFO:     127.0.0.1:64133 - "GET /api/v1/reports?page=1&page_size=50 HTTP/1.1" 200 OK
+2026-09-21 23:57:38,329 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-21 23:57:38,335 INFO sqlalchemy.engine.Engine SELECT reports.id, reports.source_file, reports.site, reports.country, reports.industry_sector, reports.equipment, reports.shift_date, reports.reporter_role, reports.report_text, reports.report_type, reports.critical_risk, reports.ocr_confidence, reports.ingest_status, reports.has_site_metadata, reports.has_equipment_metadata, reports.has_shift_metadata, reports.text_only_mode, reports.lower_confidence_flag, reports.created_at, predictions.id AS id_1, predictions.report_id, predictions.stage1_flagged, predictions.stage1_score, predictions.sif_flag, predictions.calibrated_prob, predictions.confidence_band, predictions.ood_score, predictions.iogp_rules, predictions.cause_categories, predictions.shap_values, predictions.ig_spans, predictions.routing_reason, predictions.operational_state, predictions.created_at AS created_at_1, officer_decisions.id AS id_2, officer_decisions.report_id AS report_id_1, officer_decisions.officer_id, officer_decisions.officer_role, officer_decisions.decision, officer_decisions.notes, officer_decisions.created_at AS created_at_2 
+FROM reports LEFT OUTER JOIN predictions ON predictions.report_id = reports.id LEFT OUTER JOIN officer_decisions ON officer_decisions.report_id = reports.id ORDER BY predictions.calibrated_prob DESC NULLS LAST
+ LIMIT ? OFFSET ?
+2026-09-21 23:57:38,335 INFO sqlalchemy.engine.Engine [cached since 1346s ago] (50, 0)
+2026-09-21 23:57:38,356 INFO sqlalchemy.engine.Engine COMMIT
+INFO:     127.0.0.1:64133 - "GET /api/v1/reports?page=1&page_size=50 HTTP/1.1" 200 OK
+2026-09-22 00:04:54,203 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-22 00:04:54,211 INFO sqlalchemy.engine.Engine SELECT reports.id, reports.source_file, reports.site, reports.country, reports.industry_sector, reports.equipment, reports.shift_date, reports.reporter_role, reports.report_text, reports.report_type, reports.critical_risk, reports.ocr_confidence, reports.ingest_status, reports.has_site_metadata, reports.has_equipment_metadata, reports.has_shift_metadata, reports.text_only_mode, reports.lower_confidence_flag, reports.created_at, predictions.id AS id_1, predictions.report_id, predictions.stage1_flagged, predictions.stage1_score, predictions.sif_flag, predictions.calibrated_prob, predictions.confidence_band, predictions.ood_score, predictions.iogp_rules, predictions.cause_categories, predictions.shap_values, predictions.ig_spans, predictions.routing_reason, predictions.operational_state, predictions.created_at AS created_at_1 
+FROM reports LEFT OUTER JOIN predictions ON predictions.report_id = reports.id 
+WHERE reports.ingest_status = ? OR predictions.confidence_band IN (?, ?, ?) OR reports.lower_confidence_flag = 1
+ LIMIT ? OFFSET ?
+2026-09-22 00:04:54,218 INFO sqlalchemy.engine.Engine [cached since 5451s ago] ('MANUAL_REVIEW', 'LOW', 'AMBIGUOUS', 'OOD', 50, 0)
+2026-09-22 00:04:54,233 INFO sqlalchemy.engine.Engine COMMIT
+INFO:     127.0.0.1:60615 - "GET /api/v1/queue/manual-review?page=1&page_size=50 HTTP/1.1" 200 OK
+2026-09-22 00:04:54,258 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-22 00:04:54,258 INFO sqlalchemy.engine.Engine SELECT reports.id, reports.source_file, reports.site, reports.country, reports.industry_sector, reports.equipment, reports.shift_date, reports.reporter_role, reports.report_text, reports.report_type, reports.critical_risk, reports.ocr_confidence, reports.ingest_status, reports.has_site_metadata, reports.has_equipment_metadata, reports.has_shift_metadata, reports.text_only_mode, reports.lower_confidence_flag, reports.created_at, predictions.id AS id_1, predictions.report_id, predictions.stage1_flagged, predictions.stage1_score, predictions.sif_flag, predictions.calibrated_prob, predictions.confidence_band, predictions.ood_score, predictions.iogp_rules, predictions.cause_categories, predictions.shap_values, predictions.ig_spans, predictions.routing_reason, predictions.operational_state, predictions.created_at AS created_at_1 
+FROM reports LEFT OUTER JOIN predictions ON predictions.report_id = reports.id 
+WHERE reports.ingest_status = ? OR predictions.confidence_band IN (?, ?, ?) OR reports.lower_confidence_flag = 1
+ LIMIT ? OFFSET ?
+2026-09-22 00:04:54,265 INFO sqlalchemy.engine.Engine [cached since 5451s ago] ('MANUAL_REVIEW', 'LOW', 'AMBIGUOUS', 'OOD', 50, 0)
+2026-09-22 00:04:54,283 INFO sqlalchemy.engine.Engine COMMIT
+INFO:     127.0.0.1:60615 - "GET /api/v1/queue/manual-review?page=1&page_size=50 HTTP/1.1" 200 OK
+2026-09-22 00:05:07,202 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-22 00:05:07,204 INFO sqlalchemy.engine.Engine SELECT active_learning_queue.id, active_learning_queue.report_id, active_learning_queue.model_prob, active_learning_queue.queue_reason, active_learning_queue.corrected_sif, active_learning_queue.corrected_iogp, active_learning_queue.corrected_cause, active_learning_queue.labeled_by, active_learning_queue.labeled_at, active_learning_queue.created_at, active_learning_queue.status, reports.id AS id_1, reports.source_file, reports.site, reports.country, reports.industry_sector, reports.equipment, reports.shift_date, reports.reporter_role, reports.report_text, reports.report_type, reports.critical_risk, reports.ocr_confidence, reports.ingest_status, reports.has_site_metadata, reports.has_equipment_metadata, reports.has_shift_metadata, reports.text_only_mode, reports.lower_confidence_flag, reports.created_at AS created_at_1 
+FROM active_learning_queue JOIN reports ON reports.id = active_learning_queue.report_id 
+WHERE active_learning_queue.status = ? ORDER BY active_learning_queue.model_prob
+2026-09-22 00:05:07,207 INFO sqlalchemy.engine.Engine [cached since 5463s ago] ('PENDING',)
+2026-09-22 00:05:07,209 INFO sqlalchemy.engine.Engine COMMIT
+INFO:     127.0.0.1:56649 - "GET /api/v1/active-learning/queue HTTP/1.1" 200 OK
+2026-09-22 00:05:07,223 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-22 00:05:07,230 INFO sqlalchemy.engine.Engine SELECT active_learning_queue.id, active_learning_queue.report_id, active_learning_queue.model_prob, active_learning_queue.queue_reason, active_learning_queue.corrected_sif, active_learning_queue.corrected_iogp, active_learning_queue.corrected_cause, active_learning_queue.labeled_by, active_learning_queue.labeled_at, active_learning_queue.created_at, active_learning_queue.status, reports.id AS id_1, reports.source_file, reports.site, reports.country, reports.industry_sector, reports.equipment, reports.shift_date, reports.reporter_role, reports.report_text, reports.report_type, reports.critical_risk, reports.ocr_confidence, reports.ingest_status, reports.has_site_metadata, reports.has_equipment_metadata, reports.has_shift_metadata, reports.text_only_mode, reports.lower_confidence_flag, reports.created_at AS created_at_1 
+FROM active_learning_queue JOIN reports ON reports.id = active_learning_queue.report_id 
+WHERE active_learning_queue.status = ? ORDER BY active_learning_queue.model_prob
+2026-09-22 00:05:07,230 INFO sqlalchemy.engine.Engine [cached since 5463s ago] ('PENDING',)
+2026-09-22 00:05:07,230 INFO sqlalchemy.engine.Engine COMMIT
+INFO:     127.0.0.1:56649 - "GET /api/v1/active-learning/queue HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56649 - "OPTIONS /api/v1/reports?page=1&page_size=50 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60078 - "OPTIONS /api/v1/reports?page=1&page_size=50 HTTP/1.1" 200 OK
+2026-09-22 00:05:09,593 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-22 00:05:09,599 INFO sqlalchemy.engine.Engine SELECT reports.id, reports.source_file, reports.site, reports.country, reports.industry_sector, reports.equipment, reports.shift_date, reports.reporter_role, reports.report_text, reports.report_type, reports.critical_risk, reports.ocr_confidence, reports.ingest_status, reports.has_site_metadata, reports.has_equipment_metadata, reports.has_shift_metadata, reports.text_only_mode, reports.lower_confidence_flag, reports.created_at, predictions.id AS id_1, predictions.report_id, predictions.stage1_flagged, predictions.stage1_score, predictions.sif_flag, predictions.calibrated_prob, predictions.confidence_band, predictions.ood_score, predictions.iogp_rules, predictions.cause_categories, predictions.shap_values, predictions.ig_spans, predictions.routing_reason, predictions.operational_state, predictions.created_at AS created_at_1, officer_decisions.id AS id_2, officer_decisions.report_id AS report_id_1, officer_decisions.officer_id, officer_decisions.officer_role, officer_decisions.decision, officer_decisions.notes, officer_decisions.created_at AS created_at_2 
+FROM reports LEFT OUTER JOIN predictions ON predictions.report_id = reports.id LEFT OUTER JOIN officer_decisions ON officer_decisions.report_id = reports.id ORDER BY predictions.calibrated_prob DESC NULLS LAST
+ LIMIT ? OFFSET ?
+2026-09-22 00:05:09,603 INFO sqlalchemy.engine.Engine [cached since 1797s ago] (50, 0)
+2026-09-22 00:05:09,626 INFO sqlalchemy.engine.Engine COMMIT
+INFO:     127.0.0.1:56649 - "GET /api/v1/reports?page=1&page_size=50 HTTP/1.1" 200 OK
+2026-09-22 00:05:09,638 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-22 00:05:09,640 INFO sqlalchemy.engine.Engine SELECT reports.id, reports.source_file, reports.site, reports.country, reports.industry_sector, reports.equipment, reports.shift_date, reports.reporter_role, reports.report_text, reports.report_type, reports.critical_risk, reports.ocr_confidence, reports.ingest_status, reports.has_site_metadata, reports.has_equipment_metadata, reports.has_shift_metadata, reports.text_only_mode, reports.lower_confidence_flag, reports.created_at, predictions.id AS id_1, predictions.report_id, predictions.stage1_flagged, predictions.stage1_score, predictions.sif_flag, predictions.calibrated_prob, predictions.confidence_band, predictions.ood_score, predictions.iogp_rules, predictions.cause_categories, predictions.shap_values, predictions.ig_spans, predictions.routing_reason, predictions.operational_state, predictions.created_at AS created_at_1, officer_decisions.id AS id_2, officer_decisions.report_id AS report_id_1, officer_decisions.officer_id, officer_decisions.officer_role, officer_decisions.decision, officer_decisions.notes, officer_decisions.created_at AS created_at_2 
+FROM reports LEFT OUTER JOIN predictions ON predictions.report_id = reports.id LEFT OUTER JOIN officer_decisions ON officer_decisions.report_id = reports.id ORDER BY predictions.calibrated_prob DESC NULLS LAST
+ LIMIT ? OFFSET ?
+2026-09-22 00:05:09,642 INFO sqlalchemy.engine.Engine [cached since 1797s ago] (50, 0)
+2026-09-22 00:05:09,660 INFO sqlalchemy.engine.Engine COMMIT
+INFO:     127.0.0.1:60078 - "GET /api/v1/reports?page=1&page_size=50 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61181 - "OPTIONS /api/v1/reports?page=2&page_size=50 HTTP/1.1" 200 OK
+2026-09-22 00:05:27,765 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-22 00:05:27,771 INFO sqlalchemy.engine.Engine SELECT reports.id, reports.source_file, reports.site, reports.country, reports.industry_sector, reports.equipment, reports.shift_date, reports.reporter_role, reports.report_text, reports.report_type, reports.critical_risk, reports.ocr_confidence, reports.ingest_status, reports.has_site_metadata, reports.has_equipment_metadata, reports.has_shift_metadata, reports.text_only_mode, reports.lower_confidence_flag, reports.created_at, predictions.id AS id_1, predictions.report_id, predictions.stage1_flagged, predictions.stage1_score, predictions.sif_flag, predictions.calibrated_prob, predictions.confidence_band, predictions.ood_score, predictions.iogp_rules, predictions.cause_categories, predictions.shap_values, predictions.ig_spans, predictions.routing_reason, predictions.operational_state, predictions.created_at AS created_at_1, officer_decisions.id AS id_2, officer_decisions.report_id AS report_id_1, officer_decisions.officer_id, officer_decisions.officer_role, officer_decisions.decision, officer_decisions.notes, officer_decisions.created_at AS created_at_2 
+FROM reports LEFT OUTER JOIN predictions ON predictions.report_id = reports.id LEFT OUTER JOIN officer_decisions ON officer_decisions.report_id = reports.id ORDER BY predictions.calibrated_prob DESC NULLS LAST
+ LIMIT ? OFFSET ?
+2026-09-22 00:05:27,771 INFO sqlalchemy.engine.Engine [cached since 1815s ago] (50, 50)
+2026-09-22 00:05:27,816 INFO sqlalchemy.engine.Engine COMMIT
+INFO:     127.0.0.1:61181 - "GET /api/v1/reports?page=2&page_size=50 HTTP/1.1" 200 OK
+2026-09-22 00:05:31,212 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-22 00:05:31,220 INFO sqlalchemy.engine.Engine SELECT reports.id, reports.source_file, reports.site, reports.country, reports.industry_sector, reports.equipment, reports.shift_date, reports.reporter_role, reports.report_text, reports.report_type, reports.critical_risk, reports.ocr_confidence, reports.ingest_status, reports.has_site_metadata, reports.has_equipment_metadata, reports.has_shift_metadata, reports.text_only_mode, reports.lower_confidence_flag, reports.created_at, predictions.id AS id_1, predictions.report_id, predictions.stage1_flagged, predictions.stage1_score, predictions.sif_flag, predictions.calibrated_prob, predictions.confidence_band, predictions.ood_score, predictions.iogp_rules, predictions.cause_categories, predictions.shap_values, predictions.ig_spans, predictions.routing_reason, predictions.operational_state, predictions.created_at AS created_at_1, officer_decisions.id AS id_2, officer_decisions.report_id AS report_id_1, officer_decisions.officer_id, officer_decisions.officer_role, officer_decisions.decision, officer_decisions.notes, officer_decisions.created_at AS created_at_2 
+FROM reports LEFT OUTER JOIN predictions ON predictions.report_id = reports.id LEFT OUTER JOIN officer_decisions ON officer_decisions.report_id = reports.id ORDER BY predictions.calibrated_prob DESC NULLS LAST
+ LIMIT ? OFFSET ?
+2026-09-22 00:05:31,223 INFO sqlalchemy.engine.Engine [cached since 1819s ago] (50, 0)
+2026-09-22 00:05:31,259 INFO sqlalchemy.engine.Engine COMMIT
+INFO:     127.0.0.1:61181 - "GET /api/v1/reports?page=1&page_size=50 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62561 - "OPTIONS /api/v1/reports?page=1&page_size=50&confidence_band=HIGH HTTP/1.1" 200 OK
+2026-09-22 00:05:37,166 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-22 00:05:37,168 INFO sqlalchemy.engine.Engine SELECT reports.id, reports.source_file, reports.site, reports.country, reports.industry_sector, reports.equipment, reports.shift_date, reports.reporter_role, reports.report_text, reports.report_type, reports.critical_risk, reports.ocr_confidence, reports.ingest_status, reports.has_site_metadata, reports.has_equipment_metadata, reports.has_shift_metadata, reports.text_only_mode, reports.lower_confidence_flag, reports.created_at, predictions.id AS id_1, predictions.report_id, predictions.stage1_flagged, predictions.stage1_score, predictions.sif_flag, predictions.calibrated_prob, predictions.confidence_band, predictions.ood_score, predictions.iogp_rules, predictions.cause_categories, predictions.shap_values, predictions.ig_spans, predictions.routing_reason, predictions.operational_state, predictions.created_at AS created_at_1, officer_decisions.id AS id_2, officer_decisions.report_id AS report_id_1, officer_decisions.officer_id, officer_decisions.officer_role, officer_decisions.decision, officer_decisions.notes, officer_decisions.created_at AS created_at_2 
+FROM reports LEFT OUTER JOIN predictions ON predictions.report_id = reports.id LEFT OUTER JOIN officer_decisions ON officer_decisions.report_id = reports.id 
+WHERE predictions.confidence_band = ? ORDER BY predictions.calibrated_prob DESC NULLS LAST
+ LIMIT ? OFFSET ?
+2026-09-22 00:05:37,168 INFO sqlalchemy.engine.Engine [generated in 0.00158s] ('HIGH', 50, 0)
+2026-09-22 00:05:37,175 INFO sqlalchemy.engine.Engine COMMIT
+INFO:     127.0.0.1:62561 - "GET /api/v1/reports?page=1&page_size=50&confidence_band=HIGH HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62561 - "OPTIONS /api/v1/reports?page=1&page_size=50&confidence_band=AMBIGUOUS HTTP/1.1" 200 OK
+2026-09-22 00:05:39,606 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-22 00:05:39,606 INFO sqlalchemy.engine.Engine SELECT reports.id, reports.source_file, reports.site, reports.country, reports.industry_sector, reports.equipment, reports.shift_date, reports.reporter_role, reports.report_text, reports.report_type, reports.critical_risk, reports.ocr_confidence, reports.ingest_status, reports.has_site_metadata, reports.has_equipment_metadata, reports.has_shift_metadata, reports.text_only_mode, reports.lower_confidence_flag, reports.created_at, predictions.id AS id_1, predictions.report_id, predictions.stage1_flagged, predictions.stage1_score, predictions.sif_flag, predictions.calibrated_prob, predictions.confidence_band, predictions.ood_score, predictions.iogp_rules, predictions.cause_categories, predictions.shap_values, predictions.ig_spans, predictions.routing_reason, predictions.operational_state, predictions.created_at AS created_at_1, officer_decisions.id AS id_2, officer_decisions.report_id AS report_id_1, officer_decisions.officer_id, officer_decisions.officer_role, officer_decisions.decision, officer_decisions.notes, officer_decisions.created_at AS created_at_2 
+FROM reports LEFT OUTER JOIN predictions ON predictions.report_id = reports.id LEFT OUTER JOIN officer_decisions ON officer_decisions.report_id = reports.id 
+WHERE predictions.confidence_band = ? ORDER BY predictions.calibrated_prob DESC NULLS LAST
+ LIMIT ? OFFSET ?
+2026-09-22 00:05:39,606 INFO sqlalchemy.engine.Engine [cached since 2.44s ago] ('AMBIGUOUS', 50, 0)
+2026-09-22 00:05:39,620 INFO sqlalchemy.engine.Engine COMMIT
+INFO:     127.0.0.1:62561 - "GET /api/v1/reports?page=1&page_size=50&confidence_band=AMBIGUOUS HTTP/1.1" 200 OK
+2026-09-22 00:05:41,836 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-22 00:05:41,839 INFO sqlalchemy.engine.Engine SELECT reports.id, reports.source_file, reports.site, reports.country, reports.industry_sector, reports.equipment, reports.shift_date, reports.reporter_role, reports.report_text, reports.report_type, reports.critical_risk, reports.ocr_confidence, reports.ingest_status, reports.has_site_metadata, reports.has_equipment_metadata, reports.has_shift_metadata, reports.text_only_mode, reports.lower_confidence_flag, reports.created_at, predictions.id AS id_1, predictions.report_id, predictions.stage1_flagged, predictions.stage1_score, predictions.sif_flag, predictions.calibrated_prob, predictions.confidence_band, predictions.ood_score, predictions.iogp_rules, predictions.cause_categories, predictions.shap_values, predictions.ig_spans, predictions.routing_reason, predictions.operational_state, predictions.created_at AS created_at_1, officer_decisions.id AS id_2, officer_decisions.report_id AS report_id_1, officer_decisions.officer_id, officer_decisions.officer_role, officer_decisions.decision, officer_decisions.notes, officer_decisions.created_at AS created_at_2 
+FROM reports LEFT OUTER JOIN predictions ON predictions.report_id = reports.id LEFT OUTER JOIN officer_decisions ON officer_decisions.report_id = reports.id ORDER BY predictions.calibrated_prob DESC NULLS LAST
+ LIMIT ? OFFSET ?
+2026-09-22 00:05:41,841 INFO sqlalchemy.engine.Engine [cached since 1829s ago] (50, 0)
+2026-09-22 00:05:41,855 INFO sqlalchemy.engine.Engine COMMIT
+INFO:     127.0.0.1:62561 - "GET /api/v1/reports?page=1&page_size=50 HTTP/1.1" 200 OK
