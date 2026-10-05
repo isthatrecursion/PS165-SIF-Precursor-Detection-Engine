@@ -2,7 +2,8 @@
  * SIH165 API Client — typed fetch wrapper for all backend endpoints
  */
 
-const BASE = "http://localhost:8000/api/v1";
+// Fallback to localhost if VITE_API_BASE_URL is not set (for local dev)
+const BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api/v1";
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
