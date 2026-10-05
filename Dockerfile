@@ -20,8 +20,7 @@ RUN pip install --no-cache-dir -r requirements.txt \
 # Copy the rest of the backend application
 COPY backend/ /app/
 
-# Copy the local SQLite database and model files
-COPY sih165.db /app/sih165.db
+# Copy the model files
 COPY ml/ /ml/
 
 # Set environment variables

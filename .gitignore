@@ -9,9 +9,6 @@ __pycache__/
 dist/
 build/
 .DS_Store
-*.db
-sih165.db
-.gemini/
-ml/models/
+
 frontend/dist/
 frontend/node_modules/
